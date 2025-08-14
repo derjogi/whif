@@ -1,10 +1,12 @@
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { supabase } from '$lib/supabase/client';
 import { ImpactCalculationService } from '$lib/server/services/impactCalculationService';
+import { statementsAPI } from '$lib/api/client';
+import type { StatementVoteRequest } from '$lib/types/api';
 
 interface VoteData {
 	statementId: string;
-	voteType: number;
+	voteType: StatementVoteRequest['voteType'];
 }
 
 interface VoteCounts {
@@ -17,19 +19,13 @@ export function useVoteMutation() {
 
 	return createMutation({
 		mutationFn: async ({ statementId, voteType }: VoteData) => {
-			const response = await fetch(`/api/statements/${statementId}/vote`, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({ voteType }),
-			});
-
-			if (!response.ok) {
-				throw new Error('Vote failed');
+			const response = await statementsAPI.vote(statementId, { voteType });
+			
+			if (!response.success) {
+				throw new Error(response.error || 'Vote failed');
 			}
 
-			return response.json();
+			return response.data;
 		},
 		onMutate: async ({ statementId, voteType }: VoteData) => {
 			// Cancel any outgoing refetches

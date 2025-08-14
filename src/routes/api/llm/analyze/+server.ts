@@ -60,50 +60,45 @@ export const POST: RequestHandler = async ({ request, locals }) => {
         published: false
       });
 
-      // Store extracted statements using direct Supabase calls
+      // Store extracted statements using statementRepository
       if (result.extractedStatements && result.extractedStatements.length > 0) {
-        const statementInserts = result.extractedStatements.map((statement: any) => ({
-          idea_id: newIdea.id,
-          text: statement.text || statement,
-          calculated_impact_score: statement.impactScore || '0.50'
-        }));
-        
-        const { data: insertedStatements, error: statementsError } = await locals.supabase
-          .from('statements')
-          .insert(statementInserts)
-          .select();
+        const statementsWithMetrics = result.extractedStatements.map((statement: any, index: number) => {
+          const statementText = statement.text || statement;
+          const impactScore = statement.impactScore || '0.50';
           
-        if (statementsError) {
-          console.error('Error inserting statements:', statementsError);
-        } else {
-          // Store statement metrics if available
-          if (result.evaluatedScores && insertedStatements) {
-            const metricInserts = [];
-            for (let i = 0; i < insertedStatements.length; i++) {
-              const statement = insertedStatements[i];
-              const scores = result.evaluatedScores[i] || {};
-              
-              // Add metrics for each score type
-              for (const [metricName, metricValue] of Object.entries(scores)) {
-                if (typeof metricValue === 'number') {
-                  metricInserts.push({
-                    statement_id: statement.id,
-                    metric_name: metricName,
-                    metric_value: metricValue.toString()
-                  });
-                }
-              }
+          // Create statement data
+          const statementData = {
+            ideaId: newIdea.id,
+            text: statementText,
+            calculatedImpactScore: impactScore
+          };
+          
+          // Create metrics from evaluatedScores
+          const metrics = [];
+          const scores = result.evaluatedScores[index] || {};
+          
+          for (const [metricName, metricValue] of Object.entries(scores)) {
+            if (typeof metricValue === 'number') {
+              metrics.push({
+                metricName,
+                metricValue: metricValue.toString()
+              });
             }
-            
-            if (metricInserts.length > 0) {
-              const { error: metricsError } = await locals.supabase
-                .from('statement_metrics')
-                .insert(metricInserts);
-                
-              if (metricsError) {
-                console.error('Error inserting statement metrics:', metricsError);
-              }
-            }
+          }
+          
+          return {
+            statement: statementData,
+            metrics
+          };
+        });
+        
+        // Use statementRepository to create statements with metrics in batch
+        if (statementsWithMetrics.length > 0) {
+          try {
+            await repositories.statements.createBatchWithMetrics(statementsWithMetrics);
+            console.log(`Successfully stored ${statementsWithMetrics.length} statements with metrics`);
+          } catch (error) {
+            console.error('Error creating statements with metrics:', error);
           }
         }
       }
