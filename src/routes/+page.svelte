@@ -1,45 +1,17 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import { supabase } from '$lib/supabase/client';
+	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import Icon from '@iconify/svelte';
 	import IdeaCard from '$lib/components/IdeaCard.svelte';
 	import SearchBox from '$lib/components/SearchBox.svelte';
 	import EmptyDashboard from '$lib/components/EmptyDashboard.svelte';
 	
-	let ideas: any[] = [];
-	let loading = true;
+	export let data: any;
+	
 	let searchQuery = '';
-	let user: any = null;
 	
-	onMount(async () => {
-		// Get current user
-		const { data: { session } } = await supabase.auth.getSession();
-		user = session?.user;
-		
-		if (user) {
-			await loadIdeas();
-		}
-		loading = false;
-	});
-	
-	async function loadIdeas() {
-		try {
-			const { data, error } = await supabase
-				.from('ideas')
-				.select('*')
-				.eq('user_id', user.id)
-				.order('created_at', { ascending: false });
-				
-			if (error) throw error;
-			ideas = data || [];
-		} catch (error) {
-			console.error('Error loading ideas:', error);
-		}
-	}
-	
-	function handleSearch(query: string) {
-		searchQuery = query;
+	function handleSearch(event: CustomEvent<string>) {
+		searchQuery = event.detail;
 		// In a real app, you'd filter the ideas here
 	}
 	
@@ -47,7 +19,7 @@
 		goto('/create');
 	}
 	
-	$: filteredIdeas = ideas.filter(idea => 
+	$: filteredIdeas = data.ideas.filter((idea: any) => 
 		idea.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
 		idea.text.toLowerCase().includes(searchQuery.toLowerCase())
 	);
@@ -74,11 +46,7 @@
 	<SearchBox on:search={handleSearch} />
 	
 	<!-- Content -->
-	{#if loading}
-		<div class="flex justify-center py-12">
-			<div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-		</div>
-	{:else if !user}
+	{#if !data.user}
 		<div class="text-center py-12">
 			<Icon icon="mdi:account-lock" class="w-16 h-16 text-gray-400 mx-auto mb-4" />
 			<h3 class="text-lg font-medium text-gray-900 mb-2">Sign in to view your ideas</h3>
@@ -90,7 +58,19 @@
 				Sign In
 			</a>
 		</div>
-	{:else if ideas.length === 0}
+	{:else if data.error}
+		<div class="text-center py-12">
+			<Icon icon="mdi:alert-circle" class="w-16 h-16 text-red-400 mx-auto mb-4" />
+			<h3 class="text-lg font-medium text-gray-900 mb-2">Error Loading Ideas</h3>
+			<p class="text-gray-600 mb-6">{data.error}</p>
+			<button
+				on:click={() => window.location.reload()}
+				class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+			>
+				Try Again
+			</button>
+		</div>
+	{:else if data.ideas.length === 0}
 		<EmptyDashboard on:createIdea={handleCreateIdea} />
 	{:else}
 		<div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

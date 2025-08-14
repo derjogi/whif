@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Icon from '@iconify/svelte';
+	
 	export let score: number;
 	
 	$: normalizedScore = Math.max(-1, Math.min(1, score));

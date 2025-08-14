@@ -8,8 +8,8 @@
 	let loading = true;
 	
 	// Get current user
-	supabase.auth.getSession().then(({ data: { session } }) => {
-		user = session?.user ?? null;
+	supabase.auth.getUser().then(({ data: { user } }) => {
+		user = user ?? null;
 		loading = false;
 	});
 	

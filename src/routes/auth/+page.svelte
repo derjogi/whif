@@ -8,8 +8,7 @@
 	
 	onMount(async () => {
 		// Check if user is already signed in
-		const { data: { session } } = await supabase.auth.getSession();
-		user = session?.user;
+		const { data: { user } } = await supabase.auth.getUser();
 		
 		if (user) {
 			goto('/');

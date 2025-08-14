@@ -10,8 +10,8 @@
 	
 	onMount(async () => {
 		// Get current user for voting
-		const { data: { session } } = await supabase.auth.getSession();
-		currentUser = session?.user;
+		const { data: { user } } = await supabase.auth.getUser();
+		currentUser = user;
 	});
 </script>
 

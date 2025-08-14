@@ -1,5 +1,5 @@
-import { pgTable, uuid, text, timestamp, boolean, integer, numeric, pgEnum, unique } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
+import { pgTable, uuid, text, timestamp, boolean, integer, numeric, pgEnum, unique, check } from 'drizzle-orm/pg-core';
+import { relations, sql } from 'drizzle-orm';
 
 // Enums
 export const voteTypeEnum = pgEnum('vote_type', ['1', '-1']);
@@ -9,7 +9,7 @@ export const ideas = pgTable('ideas', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
-  text: text('text').notNull().check('length(text) <= 64000'),
+  text: text('text').notNull(),
   summary: text('summary'),
   published: boolean('published').default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -40,19 +40,22 @@ export const statementMetrics = pgTable('statement_metrics', {
   id: uuid('id').primaryKey().defaultRandom(),
   statementId: uuid('statement_id').notNull().references(() => statements.id, { onDelete: 'cascade' }),
   metricName: text('metric_name').notNull(),
-  metricValue: numeric('metric_value', { precision: 3, scale: 2 }).notNull().check('metric_value >= -1 AND metric_value <= 1'),
+  metricValue: numeric('metric_value', { precision: 3, scale: 2 }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
-});
+}, (t) => ({
+  metricBounds: check('metric_bounds', sql`${t.metricValue} >= -1 AND ${t.metricValue} <= 1`)
+}));
 
 export const votes = pgTable('votes', {
   id: uuid('id').primaryKey().defaultRandom(),
   statementId: uuid('statement_id').notNull().references(() => statements.id, { onDelete: 'cascade' }),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
-  voteType: integer('vote_type').notNull().check('vote_type IN (1, -1)'),
+  voteType: integer('vote_type').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
-}, (table) => ({
-  uniqueVote: unique().on(table.statementId, table.userId)
+}, (t) => ({
+  uniqueVote: unique().on(t.statementId, t.userId),
+  voteTypeCheck: check('vote_type_check', sql`${t.voteType} IN (1, -1)`)
 }));
 
 // Placeholder users table (Supabase Auth handles this, but we need it for relations)
@@ -124,3 +127,46 @@ export type Vote = typeof votes.$inferSelect;
 export type NewVote = typeof votes.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
+
+// Token usage tracking
+export const tokenUsage = pgTable('token_usage', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  analysisId: uuid('analysis_id').notNull(),
+  modelName: text('model_name').notNull(),
+  inputTokens: integer('input_tokens').notNull(),
+  outputTokens: integer('output_tokens').notNull(),
+  cost: numeric('cost', { precision: 10, scale: 6 }).notNull(),
+  timestamp: timestamp('timestamp', { withTimezone: true }).notNull().defaultNow(),
+  success: boolean('success').notNull().default(true),
+  errorMessage: text('error_message')
+});
+
+export type TokenUsage = typeof tokenUsage.$inferSelect;
+export type NewTokenUsage = typeof tokenUsage.$inferInsert;
+
+// User balances and transactions
+export const userBalances = pgTable('user_balances', {
+  userId: uuid('user_id').primaryKey().references(() => users.id, { onDelete: 'cascade' }),
+  balance: numeric('balance', { precision: 12, scale: 6 }).notNull().default('0'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const balanceTransactions = pgTable('balance_transactions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  amount: numeric('amount', { precision: 12, scale: 6 }).notNull(),
+  balanceBefore: numeric('balance_before', { precision: 12, scale: 6 }).notNull(),
+  balanceAfter: numeric('balance_after', { precision: 12, scale: 6 }).notNull(),
+  transactionType: text('transaction_type').notNull(), // 'credit', 'debit', 'adjustment'
+  description: text('description'),
+  referenceId: uuid('reference_id'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+// Types for user balances and transactions
+export type UserBalance = typeof userBalances.$inferSelect;
+export type NewUserBalance = typeof userBalances.$inferInsert;
+export type BalanceTransaction = typeof balanceTransactions.$inferSelect;
+export type NewBalanceTransaction = typeof balanceTransactions.$inferInsert;

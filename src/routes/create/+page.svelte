@@ -2,30 +2,20 @@
 	import { onMount } from 'svelte';
 	import { supabase } from '$lib/supabase/client';
 	import { goto } from '$app/navigation';
-	import Icon from '@iconify/svelte';	import IdeaCreationForm from '$lib/components/IdeaCreationForm.svelte';
+	import Icon from '@iconify/svelte';	
+	import IdeaCreationForm from '$lib/components/IdeaCreationForm.svelte';
 	
 	let user: any = null;
 	let loading = true;
 	
 	onMount(async () => {
-		// Get current user
-		const { data: { session } } = await supabase.auth.getSession();
-		user = session?.user;
-		
-		if (!user) {
-			goto('/auth');
-			return;
-		}
-		
+		supabase.auth.onAuthStateChange((_event, session) => {
+			user = session?.user;
+			if (!user) {
+				goto('/auth');
+			}
+		});
 		loading = false;
-	});
-	
-	// Listen for auth changes
-	supabase.auth.onAuthStateChange((_event, session) => {
-		user = session?.user;
-		if (!user) {
-			goto('/auth');
-		}
 	});
 </script>
 

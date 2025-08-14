@@ -1,60 +1,41 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
+	import { enhance } from '$app/forms';
 	import Icon from '@iconify/svelte';
 	import TextArea from './TextArea.svelte';
 	import FileUpload from './FileUpload.svelte';
 	import FileList from './FileList.svelte';
 	import CharacterCounter from './CharacterCounter.svelte';
 	
-	const dispatch = createEventDispatcher();
-	
 	let title = '';
 	let ideaText = '';
 	let files: File[] = [];
 	let isSubmitting = false;
-	let error = '';
 	
-	function handleFileUpload(newFiles: File[]) {
-		files = [...files, ...newFiles];
+	function handleFileUpload(event: CustomEvent<File[]>) {
+		files = [...files, ...event.detail];
 	}
 	
-	function handleFileRemove(index: number) {
+	function handleFileRemove(event: CustomEvent<number>) {
+		const index = event.detail;
 		files = files.filter((_, i) => i !== index);
-	}
-	
-	async function handleSubmit() {
-		if (!title.trim() || !ideaText.trim()) {
-			error = 'Please fill in both title and idea description';
-			return;
-		}
-		
-		if (ideaText.length > 64000) {
-			error = 'Idea text exceeds maximum length of 64,000 characters';
-			return;
-		}
-		
-		isSubmitting = true;
-		error = '';
-		
-		try {
-			// TODO: Implement actual submission logic
-			// For now, just simulate success
-			await new Promise(resolve => setTimeout(resolve, 2000));
-			
-			dispatch('success', {
-				title,
-				text: ideaText,
-				files
-			});
-		} catch (err) {
-			error = 'Failed to submit idea. Please try again.';
-		} finally {
-			isSubmitting = false;
-		}
 	}
 </script>
 
-<form on:submit|preventDefault={handleSubmit} class="space-y-6">
+<form 
+	method="POST" 
+	action="?/createIdea"
+	use:enhance={() => {
+		isSubmitting = true;
+		return async ({ result }) => {
+			isSubmitting = false;
+			if (result.type === 'failure') {
+				// Handle error - you could show a toast here
+				console.error('Form submission failed:', result.data?.error);
+			}
+		};
+	}}
+	class="space-y-6"
+>
 	<!-- Title Input -->
 	<div>
 		<label for="title" class="block text-sm font-medium text-gray-700 mb-2">
@@ -62,6 +43,7 @@
 		</label>
 		<input
 			id="title"
+			name="title"
 			type="text"
 			bind:value={title}
 			required
@@ -77,6 +59,7 @@
 		</label>
 		<TextArea
 			id="idea"
+			name="idea"
 			bind:value={ideaText}
 			required
 			placeholder="Describe your idea, solution, policy, or innovation in detail. Consider including context, goals, and implementation approach..."
@@ -87,24 +70,14 @@
 	
 	<!-- File Upload -->
 	<div>
-		<label class="block text-sm font-medium text-gray-700 mb-2">
+		<label for="file-upload" class="block text-sm font-medium text-gray-700 mb-2">
 			Supporting Documents (Optional)
 		</label>
-		<FileUpload on:upload={handleFileUpload} />
+		<FileUpload id="file-upload" on:upload={handleFileUpload} />
 		{#if files.length > 0}
 			<FileList {files} on:remove={handleFileRemove} />
 		{/if}
 	</div>
-	
-	<!-- Error Display -->
-	{#if error}
-		<div class="p-4 bg-red-50 border border-red-200 rounded-md">
-			<div class="flex">
-				<Icon icon="mdi:alert-circle" class="w-5 h-5 text-red-400 mr-2" />
-				<p class="text-sm text-red-800">{error}</p>
-			</div>
-		</div>
-	{/if}
 	
 	<!-- Submit Button -->
 	<div class="flex justify-end">

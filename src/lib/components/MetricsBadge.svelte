@@ -1,4 +1,6 @@
 <script lang="ts">
+	import Icon from '@iconify/svelte';
+	
 	export let name: string;
 	export let value: number;
 	

@@ -1,3 +1,7 @@
+<script lang="ts">
+	import Icon from '@iconify/svelte';
+</script>
+
 <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
 	<div class="flex">
 		<Icon icon="mdi:alert" class="w-5 h-5 text-amber-400 mr-3 mt-0.5 flex-shrink-0" />
