@@ -51,10 +51,11 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     // Store results in database
     try {
       // First, create an idea record for this proposal
+      const proposalText = typeof proposal === 'string' ? proposal : JSON.stringify(proposal);
       const newIdea = await repositories.ideas.create({
         userId: locals.user.id,
-        title: `Analysis: ${proposal.substring(0, 100)}...`,
-        text: proposal,
+        title: `Analysis: ${proposalText.substring(0, 100)}...`,
+        text: proposalText,
         summary: result.finalSummary || '',
         published: false
       });
