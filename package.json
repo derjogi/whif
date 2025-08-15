@@ -46,6 +46,7 @@
 	},
 	"type": "module",
 	"dependencies": {
+		"@humanspeak/svelte-markdown": "^0.8.10",
 		"@iconify/svelte": "^4.0.2",
 		"@langchain/anthropic": "^0.3.26",
 		"@langchain/core": "^0.3.69",

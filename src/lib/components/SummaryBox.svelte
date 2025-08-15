@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
+	import SvelteMarkdown from '@humanspeak/svelte-markdown'
 	
 	export let summary: string;
 </script>
@@ -10,7 +11,7 @@
 		<div>
 			<h3 class="text-lg font-semibold text-blue-900 mb-3">Analysis Summary</h3>
 			<p class="text-blue-800 leading-relaxed">
-				{summary}
+				<SvelteMarkdown source={summary} />
 			</p>
 		</div>
 	</div>

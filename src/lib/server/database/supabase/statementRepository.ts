@@ -1,7 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { IStatementRepository } from '../interfaces';
 import type { Statement, NewStatement, StatementMetric, NewStatementMetric } from '../schema';
-import { space } from 'postcss/lib/list';
 
 export class SupabaseStatementRepository implements IStatementRepository {
   constructor(private supabase: SupabaseClient) {}
