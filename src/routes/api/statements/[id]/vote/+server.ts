@@ -31,7 +31,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 		return json({ success: true });
 	} catch (error) {
-		console.error('Vote action failed:', error);
+		console.error(`Vote action failed for statement ${params.id}:`, error);
 		return json({ error: 'Vote failed' }, { status: 500 });
 	}
 };

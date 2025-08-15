@@ -1,7 +1,5 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
-	import Icon from '@iconify/svelte';	
-	const dispatch = createEventDispatcher();
+	import Icon from '@iconify/svelte';
 	
 	export let statementId: string;
 	export let currentUserVote: number | null;
@@ -16,16 +14,23 @@
 		isVoting = true;
 		
 		try {
-			// Optimistic update
-			const newVoteType = currentUserVote === voteType ? null : voteType;
+			// Determine new vote type (toggle if clicking same button)
+			const newVoteType = currentUserVote === voteType ? 0 : voteType;
 			
-			if (newVoteType === null) {
-				// Remove vote
-				dispatch('vote', { statementId, voteType: 0 });
-			} else {
-				// Add/change vote
-				dispatch('vote', { statementId, voteType: newVoteType });
+			// Call the vote API
+			const response = await fetch(`/api/statements/${statementId}/vote`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify({ voteType: newVoteType }),
+			});
+
+			if (!response.ok) {
+				throw new Error(`Vote failed: ${response.statusText}`);
 			}
+
+			// The parent component will handle updates via real-time subscription
 		} catch (error) {
 			console.error('Vote failed:', error);
 		} finally {

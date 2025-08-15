@@ -13,7 +13,7 @@ export class SupabaseIdeaRepository implements IIdeaRepository {
 				title: data.title,
 				text: data.text,
 				summary: data.summary,
-				published: data.published || false
+				published: data.published || true	// Setting this to true by default, even though the database has 'false' as defaults. false means that users can't vote on statements etc
 			})
 			.select()
 			.single();
