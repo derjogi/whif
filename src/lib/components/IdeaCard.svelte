@@ -41,7 +41,7 @@
 	<div class="p-6">
 		<div class="flex items-start justify-between mb-4">
 			<h3 class="text-lg font-semibold text-gray-900 line-clamp-2">
-				{idea.title}
+				{idea.title} ({idea.published ? 'public': 'private'})
 			</h3>
 			<div class="flex-shrink-0 ml-2">
 				<Icon icon="mdi:lightbulb" class="w-5 h-5 text-blue-500" />

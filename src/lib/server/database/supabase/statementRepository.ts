@@ -22,7 +22,14 @@ export class SupabaseStatementRepository implements IStatementRepository {
   async getById(id: string): Promise<Statement | null> {
     const { data, error } = await this.supabase
       .from('statements')
-      .select('*')
+      .select(`
+        id,
+        idea_id,
+        text,
+        calculated_impact_score,
+        created_at,
+        updated_at
+      `)
       .eq('id', id)
       .single();
 
@@ -30,7 +37,15 @@ export class SupabaseStatementRepository implements IStatementRepository {
       return null;
     }
 
-    return data;
+    // Transform snake_case to camelCase to match TypeScript interface
+    return {
+      id: data.id,
+      ideaId: data.idea_id,
+      text: data.text,
+      calculatedImpactScore: data.calculated_impact_score,
+      createdAt: data.created_at,
+      updatedAt: data.updated_at
+    };
   }
 
   async update(id: string, data: Partial<NewStatement>): Promise<Statement> {

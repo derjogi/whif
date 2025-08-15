@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
 	import { supabase } from '$lib/supabase/client';
-	import Icon from '@iconify/svelte';	import VoteButtons from './VoteButtons.svelte';
+	import VoteButtons from './VoteButtons.svelte';
 	import ImpactScore from './ImpactScore.svelte';
 	import MetricsBadge from './MetricsBadge.svelte';
 	
@@ -66,6 +66,7 @@
 				table: 'votes',
 				filter: `statement_id=eq.${statement.id}`
 			}, async (payload) => {
+				console.log("Votes changed, updating...")
 				// Refresh vote data when votes change
 				await loadVoteData();
 				

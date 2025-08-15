@@ -135,9 +135,14 @@ CREATE POLICY "Users can view statements for accessible ideas" ON statements
     )
   );
 
--- Only system can manage statements (via service role)
-CREATE POLICY "Only system can manage statements" ON statements
-  FOR ALL USING (false);
+CREATE POLICY "Only system can insert statements" ON statements
+  FOR INSERT WITH CHECK (false);
+
+CREATE POLICY "Only system can update statements" ON statements  
+  FOR UPDATE USING (false);
+
+CREATE POLICY "Only system can delete statements" ON statements
+  FOR DELETE USING (false);
 
 -- RLS Policies for statement_metrics table
 CREATE POLICY "Users can view metrics for accessible statements" ON statement_metrics
@@ -155,17 +160,10 @@ CREATE POLICY "Only system can manage metrics" ON statement_metrics
 
 -- RLS Policies for votes table
 CREATE POLICY "Users can view vote aggregations" ON votes
-  FOR SELECT USING (false); -- Prevent direct access, use views/functions
+  FOR SELECT USING (true);
 
-CREATE POLICY "Users can vote on accessible statements" ON votes
-  FOR INSERT WITH CHECK (
-    user_id = auth.uid() AND
-    statement_id IN (
-      SELECT s.id FROM statements s
-      JOIN ideas i ON s.idea_id = i.id
-      WHERE i.published = true OR i.user_id = auth.uid()
-    )
-  );
+CREATE POLICY "Users can vote on statements" ON votes
+  FOR INSERT WITH CHECK (user_id = auth.uid());
 
 CREATE POLICY "Users can update own votes" ON votes
   FOR UPDATE USING (user_id = auth.uid());

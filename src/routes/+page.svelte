@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
 	import Icon from '@iconify/svelte';
 	import IdeaCard from '$lib/components/IdeaCard.svelte';
@@ -12,7 +11,7 @@
 	
 	function handleSearch(event: CustomEvent<string>) {
 		searchQuery = event.detail;
-		// In a real app, you'd filter the ideas here
+		// TODO: filter the ideas here
 	}
 	
 	function handleCreateIdea() {

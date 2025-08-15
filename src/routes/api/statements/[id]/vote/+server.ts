@@ -9,6 +9,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 
 	try {
 		const { voteType } = await request.json();
+		console.log('Vote type requested:', voteType);
 		
 		// Validate vote type
 		if (![1, -1, 0].includes(voteType)) {
@@ -22,6 +23,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 			await repositories.votes.delete(locals.user.id, params.id);
 		} else {
 			// Upsert vote
+			console.log('Upserting vote...');
 			await repositories.votes.upsert({
 				statementId: params.id,
 				userId: locals.user.id,

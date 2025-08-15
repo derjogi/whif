@@ -25,3 +25,6 @@ vite.config.ts.timestamp-*
 
 # Jujutsu version control files
 .jj/
+
+# AI
+.kilocode

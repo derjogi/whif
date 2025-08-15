@@ -20,21 +20,23 @@ import { createServerClient } from '@supabase/ssr';
 import { PUBLIC_SUPABASE_URL } from '$env/static/public';
 import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
 
-const supabase = createServerClient(
-	PUBLIC_SUPABASE_URL,
-	SUPABASE_SERVICE_ROLE_KEY,
-	{
+const supabase = createServerClient(PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
 		cookies: {
-			get(name: string) {
-				return ''
+			getAll() {
+				return []
 			},
-			set(name: string, value: string, options: any) {},
-			remove(name: string, options: any) {},
+			setAll(cookiesToSet) {
+				/**
+				 * Note: You have to add the `path` variable to the
+				 * set and remove method due to sveltekit's cookie API
+				 * requiring this to be set, setting the path to an empty string
+				 * will replicate previous/standard behavior (https://kit.svelte.dev/docs/types#public-types-cookies)
+				 */
+			},
 		},
-	}
-);
+	})
 
-const userId = 'd12d7289-2537-48d6-b51e-d99cf9bcd648';
+const userId = 'a80281e3-ad49-4c5c-9efd-d576c7244874';
 
 describe('POST /api/llm/analyze', () => {
 	const mockRequest = (body: any) =>
