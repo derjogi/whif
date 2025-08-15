@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { IStatementRepository } from '../interfaces';
 import type { Statement, NewStatement, StatementMetric, NewStatementMetric } from '../schema';
+import { space } from 'postcss/lib/list';
 
 export class SupabaseStatementRepository implements IStatementRepository {
   constructor(private supabase: SupabaseClient) {}
@@ -174,14 +175,14 @@ export class SupabaseStatementRepository implements IStatementRepository {
     }
 
     // Create all statements first
-    const statementsData = statementsWithMetrics.map(item => item.statement);
+    const statementsData: NewStatement[] = statementsWithMetrics.map(item => item.statement);
     const { data: insertedStatements, error: statementsError } = await this.supabase
       .from('statements')
       .insert(statementsData)
       .select();
 
     if (statementsError) {
-      throw new Error(`Failed to create statements batch: ${statementsError.message}`);
+      throw new Error(`Failed to create statements batch: ${statementsError.message}. Statement Data: ${JSON.stringify(statementsData)}`);
     }
 
     if (!insertedStatements || insertedStatements.length === 0) {

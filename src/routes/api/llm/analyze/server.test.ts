@@ -3,6 +3,7 @@ import { POST } from './+server';
 import type { RequestEvent } from '@sveltejs/kit';
 
 // Mock the workflow and tracing functions
+// A lot of the mocking can actually be removed, so that I can use real db!
 vi.mock('../../../../lib/server/llm/langfuseIntegration', () => ({
 	invokeWithTracing: vi.fn()
 }));
@@ -13,24 +14,27 @@ vi.mock('../../../../lib/server/llm/costTracking/balanceService', () => ({
 	}))
 }));
 
-vi.mock('../../../../lib/server/database/supabase', () => ({
-	createRepositories: vi.fn(() => ({
-		ideas: {
-			create: vi.fn().mockResolvedValue({
-				id: 'test-idea-id',
-				userId: 'test-user-id',
-				title: 'Test Analysis',
-				text: 'Test proposal',
-				summary: 'Test summary',
-				published: false
-			})
-		},
-		userBalances: {},
-		balanceTransactions: {}
-	}))
-}));
 
 import { invokeWithTracing } from '../../../../lib/server/llm/langfuseIntegration';
+import { createServerClient } from '@supabase/ssr';
+import { PUBLIC_SUPABASE_URL } from '$env/static/public';
+import { SUPABASE_SERVICE_ROLE_KEY } from '$env/static/private';
+
+const supabase = createServerClient(
+	PUBLIC_SUPABASE_URL,
+	SUPABASE_SERVICE_ROLE_KEY,
+	{
+		cookies: {
+			get(name: string) {
+				return ''
+			},
+			set(name: string, value: string, options: any) {},
+			remove(name: string, options: any) {},
+		},
+	}
+);
+
+const userId = 'd12d7289-2537-48d6-b51e-d99cf9bcd648';
 
 describe('POST /api/llm/analyze', () => {
 	const mockRequest = (body: any) =>
@@ -39,24 +43,8 @@ describe('POST /api/llm/analyze', () => {
 		}) as Request;
 
 	const mockLocals = {
-		user: { id: 'test-user-id' },
-		supabase: {
-			from: vi.fn(() => ({
-				insert: vi.fn(() => ({
-					select: vi.fn().mockResolvedValue({
-						data: [
-							{
-								id: 'test-statement-id-1',
-								idea_id: 'test-idea-id',
-								text: 'Statement 1',
-								calculated_impact_score: '0.75'
-							}
-						],
-						error: null
-					})
-				}))
-			}))
-		}
+		user: { id: userId },
+		supabase
 	};
 
 	const mockRequestEvent: RequestEvent = {
@@ -735,7 +723,7 @@ The comprehensive data strongly supports the proposal, demonstrating substantial
 			expect.anything(), // workflow
 			expect.objectContaining({
 				proposal: 'Test proposal',
-				userId: 'test-user-id',
+				userId,
 				extractedStatements: [],
 				downstreamImpacts: [],
 				groupedCategories: {},
@@ -744,9 +732,6 @@ The comprehensive data strongly supports the proposal, demonstrating substantial
 				finalSummary: ''
 			})
 		);
-
-		// Verify database operations
-		expect(mockLocals.supabase.from).toHaveBeenCalledWith('statements');
 	});
 
 	it('should handle object proposals correctly', async () => {

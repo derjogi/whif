@@ -68,9 +68,9 @@ export const POST: RequestHandler = async ({ request, locals }) => {
           
           // Create statement data
           const statementData = {
-            ideaId: newIdea.id,
+            idea_id: newIdea.id,
             text: statementText,
-            calculatedImpactScore: impactScore
+            calculated_impact_score: impactScore
           };
           
           // Create metrics from evaluatedScores
