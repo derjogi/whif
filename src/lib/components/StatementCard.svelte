@@ -59,26 +59,36 @@
 	
 	function setupRealtimeSubscription() {
 		subscription = supabase
-			.channel(`votes-${statement.id}`)
-			.on('postgres_changes', {
-				event: '*',
-				schema: 'public',
-				table: 'votes',
-				filter: `statement_id=eq.${statement.id}`
+			.channel(`statement_votes:${statement.id}`)
+			.on('broadcast', {
+				event: 'vote_change'
 			}, async (payload) => {
-				console.log("Votes changed, updating...")
-				// Refresh vote data when votes change
-				await loadVoteData();
+				console.log("Vote broadcast received:", payload);
 				
-				// Update calculated score
-				const { data: updatedStatement } = await supabase
-					.from('statements')
-					.select('calculated_impact_score')
-					.eq('id', statement.id)
-					.single();
+				// Handle the broadcast payload directly
+				if (payload.payload && payload.payload.statement_id === statement.id) {
+					const voteData = payload.payload;
 					
-				if (updatedStatement) {
-					calculatedScore = updatedStatement.calculated_impact_score;
+					// Update vote counts from broadcast data
+					upvotes = voteData.upvotes || 0;
+					downvotes = voteData.downvotes || 0;
+					
+					// Fetch updated impact score since it's not in the broadcast
+					try {
+						const { data: updatedStatement } = await supabase
+							.from('statements')
+							.select('calculated_impact_score')
+							.eq('id', statement.id)
+							.single();
+							
+						if (updatedStatement) {
+							calculatedScore = updatedStatement.calculated_impact_score;
+						}
+					} catch (error) {
+						console.error('Error fetching updated impact score:', error);
+					}
+					
+					console.log(`Updated votes for statement ${statement.id}: ${upvotes} up, ${downvotes} down`);
 				}
 			})
 			.subscribe();

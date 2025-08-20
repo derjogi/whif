@@ -21,45 +21,50 @@ const createRealtimeStore = () => {
 		isConnected: false
 	});
 
-	// Subscribe to vote changes for a specific statement
+	// Subscribe to vote changes for a specific statement using broadcast subscriptions
 	function subscribeToVotes(statementId: string, callback: (update: VoteUpdate) => void) {
 		const subscription = supabase
-			.channel(`votes:${statementId}`)
+			.channel(`statement_votes:${statementId}`)
 			.on(
-				'postgres_changes',
+				'broadcast',
 				{
-					event: '*',
-					schema: 'public',
-					table: 'votes',
-					filter: `statement_id=eq.${statementId}`
+					event: 'vote_change'
 				},
 				async (payload) => {
-					// Fetch updated vote counts and impact score
-					try {
-						const { data: votes } = await supabase
-							.from('votes')
-							.select('vote_type')
-							.eq('statement_id', statementId);
-
-						const { data: statement } = await supabase
-							.from('statements')
-							.select('calculated_impact_score')
-							.eq('id', statementId)
-							.single();
-
-						if (votes && statement) {
-							const upvotes = votes.filter(vote => vote.vote_type === 1).length;
-							const downvotes = votes.filter(vote => vote.vote_type === -1).length;
-							
-							callback({
-								statementId,
-								upvotes,
-								downvotes,
-								impactScore: statement.calculated_impact_score
-							});
+					console.log('Vote broadcast received in store:', payload);
+					
+					// Handle the broadcast payload directly
+					if (payload.payload && payload.payload.statement_id === statementId) {
+						const voteData = payload.payload;
+						
+						// Extract data from broadcast payload
+						const upvotes = voteData.upvotes || 0;
+						const downvotes = voteData.downvotes || 0;
+						
+						// Fetch impact score since it's not in the broadcast payload
+						let impactScore = 0.5; // Default value
+						try {
+							const { data: statement } = await supabase
+								.from('statements')
+								.select('calculated_impact_score')
+								.eq('id', statementId)
+								.single();
+								
+							if (statement) {
+								impactScore = statement.calculated_impact_score;
+							}
+						} catch (error) {
+							console.error('Error fetching impact score in store:', error);
 						}
-					} catch (error) {
-						console.error('Error fetching updated vote data:', error);
+						
+						callback({
+							statementId,
+							upvotes,
+							downvotes,
+							impactScore
+						});
+						
+						console.log(`Store updated votes for statement ${statementId}: ${upvotes} up, ${downvotes} down, impact: ${impactScore}`);
 					}
 				}
 			)
