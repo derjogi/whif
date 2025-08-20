@@ -36,7 +36,7 @@ const supabase = createServerClient(PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_K
 		},
 	})
 
-const userId = 'a80281e3-ad49-4c5c-9efd-d576c7244874';
+const userId = '4627cddf-8e0e-4a92-b8d0-eb957dacaa02';
 
 describe('POST /api/llm/analyze', () => {
 	const mockRequest = (body: any) =>

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Icon from '@iconify/svelte';
+	import { supabase } from '$lib/supabase/client';
 	
 	export let statementId: string;
 	export let currentUserVote: number | null;
@@ -10,25 +11,28 @@
 	
 	async function handleVote(voteType: number) {
 		if (isVoting) return;
-		
+
 		isVoting = true;
-		
+
 		try {
 			// Determine new vote type (toggle if clicking same button)
 			const newVoteType = currentUserVote === voteType ? 0 : voteType;
-			
-			// Call the vote API
+			console.log("Sending vote... ", newVoteType)
+
+			// Send vote to API endpoint
 			const response = await fetch(`/api/statements/${statementId}/vote`, {
 				method: 'POST',
 				headers: {
-					'Content-Type': 'application/json',
+					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify({ voteType: newVoteType }),
+				body: JSON.stringify({ voteType: newVoteType })
 			});
 
 			if (!response.ok) {
-				throw new Error(`Vote failed: ${response.statusText}`);
+				throw new Error('Vote failed');
 			}
+
+			console.log('Vote submitted successfully');
 
 			// The parent component will handle updates via real-time subscription
 		} catch (error) {

@@ -21,53 +21,52 @@ const createRealtimeStore = () => {
 		isConnected: false
 	});
 
-	// Subscribe to vote changes for a specific statement using broadcast subscriptions
+	// Subscribe to vote changes for a specific statement using postgres_changes
 	function subscribeToVotes(statementId: string, callback: (update: VoteUpdate) => void) {
 		const subscription = supabase
-			.channel(`statement_votes:${statementId}`)
-			.on(
-				'broadcast',
-				{
-					event: 'vote_change'
-				},
-				async (payload) => {
-					console.log('Vote broadcast received in store:', payload);
-					
-					// Handle the broadcast payload directly
-					if (payload.payload && payload.payload.statement_id === statementId) {
-						const voteData = payload.payload;
-						
-						// Extract data from broadcast payload
-						const upvotes = voteData.upvotes || 0;
-						const downvotes = voteData.downvotes || 0;
-						
-						// Fetch impact score since it's not in the broadcast payload
-						let impactScore = 0.5; // Default value
-						try {
-							const { data: statement } = await supabase
-								.from('statements')
-								.select('calculated_impact_score')
-								.eq('id', statementId)
-								.single();
-								
-							if (statement) {
-								impactScore = statement.calculated_impact_score;
-							}
-						} catch (error) {
-							console.error('Error fetching impact score in store:', error);
-						}
-						
-						callback({
-							statementId,
-							upvotes,
-							downvotes,
-							impactScore
-						});
-						
-						console.log(`Store updated votes for statement ${statementId}: ${upvotes} up, ${downvotes} down, impact: ${impactScore}`);
+			.channel(`votes_realtime_${statementId}`)
+			.on('postgres_changes', { event: '*', schema: 'public', table: 'votes', filter: `statement_id=eq.${statementId}` }, async (payload) => {
+				console.log('Postgres changes received in store:', payload);
+
+				// Recalculate vote counts from database changes
+				try {
+					// Fetch current vote counts
+					const { data: votes } = await supabase
+						.from('votes')
+						.select('vote_type')
+						.eq('statement_id', statementId);
+
+					let upvotes = 0;
+					let downvotes = 0;
+					if (votes) {
+						upvotes = votes.filter(v => v.vote_type === 1).length;
+						downvotes = votes.filter(v => v.vote_type === -1).length;
 					}
+
+					// Fetch impact score
+					let impactScore = 0.5; // Default value
+					const { data: statement } = await supabase
+						.from('statements')
+						.select('calculated_impact_score')
+						.eq('id', statementId)
+						.single();
+
+					if (statement) {
+						impactScore = statement.calculated_impact_score;
+					}
+
+					callback({
+						statementId,
+						upvotes,
+						downvotes,
+						impactScore
+					});
+
+					console.log(`Store recalculated votes for statement ${statementId}: ${upvotes} up, ${downvotes} down, impact: ${impactScore}`);
+				} catch (error) {
+					console.error('Error recalculating vote data in store:', error);
 				}
-			)
+			})
 			.subscribe();
 
 		// Store the subscription

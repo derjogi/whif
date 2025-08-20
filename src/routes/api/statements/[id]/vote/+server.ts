@@ -20,17 +20,21 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		
 		if (voteType === 0) {
 			// Remove vote (toggle off)
+			console.log(`Deleting vote for user ${locals.user.id} on statement ${params.id}`);
 			await repositories.votes.delete(locals.user.id, params.id);
+			console.log('Vote deleted successfully');
 		} else {
 			// Upsert vote
-			console.log('Upserting vote...');
+			console.log(`Upserting vote type ${voteType} for user ${locals.user.id} on statement ${params.id}`);
 			await repositories.votes.upsert({
 				statementId: params.id,
 				userId: locals.user.id,
 				voteType
 			});
+			console.log('Vote upserted successfully');
 		}
 
+		console.log('Vote operation completed, expecting realtime update');
 		return json({ success: true });
 	} catch (error) {
 		console.error(`Vote action failed for statement ${params.id}:`, error);

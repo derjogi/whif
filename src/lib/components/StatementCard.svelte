@@ -6,7 +6,6 @@
 	import MetricsBadge from './MetricsBadge.svelte';
 	
 	export let statement: any;
-	export let ideaId: string;
 	export let userId: string | undefined;
 	
 	let currentUserVote: number | null = null;
@@ -57,39 +56,70 @@
 		}
 	}
 	
+	const triggerRealtimeUpdate = async (payload: any) => {
+		console.log("Postgres changes received:", payload);
+		console.log("Payload structure:", JSON.stringify(payload, null, 2));
+
+		// Handle postgres_changes payload
+		// Since we have a filter on statement_id, we know this is for our statement
+		console.log("Processing vote change for statement:", statement.id);
+
+		// Recalculate vote counts from database changes
+		try {
+			// Fetch current vote counts
+			const { data: votes } = await supabase
+				.from('votes')
+				.select('vote_type')
+				.eq('statement_id', statement.id);
+
+			if (votes) {
+				upvotes = votes.filter(v => v.vote_type === 1).length;
+				downvotes = votes.filter(v => v.vote_type === -1).length;
+			}
+
+			// Update current user's vote if logged in
+			if (userId) {
+				const { data: userVote } = await supabase
+					.from('votes')
+					.select('vote_type')
+					.eq('statement_id', statement.id)
+					.eq('user_id', userId)
+					.single();
+
+				currentUserVote = userVote?.vote_type || null;
+			}
+
+			// Fetch updated impact score
+			const { data: updatedStatement } = await supabase
+				.from('statements')
+				.select('calculated_impact_score')
+				.eq('id', statement.id)
+				.single();
+
+			if (updatedStatement) {
+				calculatedScore = updatedStatement.calculated_impact_score;
+				console.log(`Updated impact score: ${calculatedScore}`);
+			}
+
+			console.log(`Recalculated votes for statement ${statement.id}: ${upvotes} up, ${downvotes} down, user vote: ${currentUserVote}`);
+		} catch (error) {
+			console.error('Error recalculating vote data:', error);
+		}
+	}
+
 	function setupRealtimeSubscription() {
+		console.log(`Setting up realtime subscription for statement ${statement.id}`);
 		subscription = supabase
-			.channel(`statement_votes:${statement.id}`)
-			.on('broadcast', {
-				event: 'vote_change'
+			.channel(`votes_realtime_${statement.id}`)
+			.on('postgres_changes',
+			{
+				event: '*',
+				schema: 'public',
+				table: 'votes',
+				filter: `statement_id=eq.${statement.id}`
 			}, async (payload) => {
-				console.log("Vote broadcast received:", payload);
-				
-				// Handle the broadcast payload directly
-				if (payload.payload && payload.payload.statement_id === statement.id) {
-					const voteData = payload.payload;
-					
-					// Update vote counts from broadcast data
-					upvotes = voteData.upvotes || 0;
-					downvotes = voteData.downvotes || 0;
-					
-					// Fetch updated impact score since it's not in the broadcast
-					try {
-						const { data: updatedStatement } = await supabase
-							.from('statements')
-							.select('calculated_impact_score')
-							.eq('id', statement.id)
-							.single();
-							
-						if (updatedStatement) {
-							calculatedScore = updatedStatement.calculated_impact_score;
-						}
-					} catch (error) {
-						console.error('Error fetching updated impact score:', error);
-					}
-					
-					console.log(`Updated votes for statement ${statement.id}: ${upvotes} up, ${downvotes} down`);
-				}
+				console.log('Postgres changes event received:', payload);
+				await triggerRealtimeUpdate(payload);
 			})
 			.subscribe();
 	}
