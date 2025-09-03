@@ -19,7 +19,6 @@
 	{#each statements as statement (statement.id)}
 		<StatementCard 
 			{statement} 
-			{ideaId}
 			userId={currentUser?.id}
 		/>
 	{/each}

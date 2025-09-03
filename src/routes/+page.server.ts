@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	try {
 		const repositories = createRepositories(locals.supabase);
-		const ideas = await repositories.ideas.getByUserId(locals.user.id);
+		const ideas = await repositories.ideas.getPublished();
 		
 		return {
 			ideas,

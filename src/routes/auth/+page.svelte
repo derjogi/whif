@@ -2,22 +2,27 @@
 	import { onMount } from 'svelte';
 	import { supabase } from '$lib/supabase/client';
 	import { goto } from '$app/navigation';
-	import Icon from '@iconify/svelte';	
+	import Icon from '@iconify/svelte';
 	let loading = true;
 	let user: any = null;
-	
+	let email = '';
+	let password = '';
+	let signInLoading = false;
+	let signInError: string | null = null;
+	let isSignUp = false;
+
 	onMount(async () => {
 		// Check if user is already signed in
 		const { data: { user } } = await supabase.auth.getUser();
-		
+
 		if (user) {
 			goto('/');
 			return;
 		}
-		
+
 		loading = false;
 	});
-	
+
 	async function handleGitHubSignIn() {
 		try {
 			const { error } = await supabase.auth.signInWithOAuth({
@@ -26,16 +31,57 @@
 					redirectTo: `${window.location.origin}/auth/callback`
 				}
 			});
-			
+
 			if (error) throw error;
 		} catch (error) {
 			console.error('GitHub sign in error:', error);
 		}
 	}
-	
-	async function handleEmailSignIn() {
-		// TODO: Implement email/password authentication
-		console.log('Email sign in not implemented yet');
+
+	async function handleEmailSignIn(event: Event) {
+		event.preventDefault();
+		signInLoading = true;
+		signInError = null;
+
+		try {
+			const { data, error } = await supabase.auth.signInWithPassword({
+				email,
+				password
+			});
+
+			if (error) throw error;
+
+			// Sign in successful, redirect to home
+			goto('/');
+		} catch (error: any) {
+			signInError = error.message || 'Sign in failed. Please try again.';
+			console.error('Email sign in error:', error);
+		} finally {
+			signInLoading = false;
+		}
+	}
+
+	async function handleEmailSignUp(event: Event) {
+		event.preventDefault();
+		signInLoading = true;
+		signInError = null;
+
+		try {
+			const { data, error } = await supabase.auth.signUp({
+				email,
+				password
+			});
+
+			if (error) throw error;
+
+			// Sign up successful, show confirmation message
+			signInError = 'Please check your email for a confirmation link to complete your registration.';
+		} catch (error: any) {
+			signInError = error.message || 'Sign up failed. Please try again.';
+			console.error('Email sign up error:', error);
+		} finally {
+			signInLoading = false;
+		}
 	}
 </script>
 
@@ -48,7 +94,7 @@
 			Welcome to WHIF
 		</h2>
 		<p class="mt-2 text-center text-sm text-gray-600">
-			Sign in to analyze the impact of your ideas
+			{isSignUp ? 'Create an account to analyze the impact of your ideas' : 'Sign in to analyze the impact of your ideas'}
 		</p>
 	</div>
 	
@@ -78,16 +124,57 @@
 							<span class="px-2 bg-white text-gray-500">Or</span>
 						</div>
 					</div>
-					
-					<!-- Email Sign In (Placeholder) -->
-					<button
-						on:click={handleEmailSignIn}
-						disabled
-						class="w-full flex justify-center items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed"
-					>
-						<Icon icon="mdi:email" class="w-5 h-5 mr-2" />
-						Sign in with Email (Coming Soon)
-					</button>
+
+					<!-- Email Auth Form -->
+					<form on:submit={isSignUp ? handleEmailSignUp : handleEmailSignIn} class="space-y-4">
+						<div>
+							<label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+							<input
+								id="email"
+								type="email"
+								bind:value={email}
+								required
+								class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+								placeholder="Enter your email"
+							/>
+						</div>
+						<div>
+							<label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+							<input
+								id="password"
+								type="password"
+								bind:value={password}
+								required
+								class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+								placeholder="Enter your password"
+							/>
+						</div>
+						{#if signInError}
+							<div class="text-sm {signInError.includes('confirmation') ? 'text-green-600' : 'text-red-600'}">{signInError}</div>
+						{/if}
+						<button
+							type="submit"
+							disabled={signInLoading}
+							class="w-full flex justify-center items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+						>
+							{#if signInLoading}
+								<div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+							{:else}
+								<Icon icon="mdi:email" class="w-5 h-5 mr-2" />
+							{/if}
+							{signInLoading ? (isSignUp ? 'Signing up...' : 'Signing in...') : (isSignUp ? 'Sign up with Email' : 'Sign in with Email')}
+						</button>
+					</form>
+
+					<!-- Toggle between Sign In and Sign Up -->
+					<div class="text-center">
+						<button
+							on:click={() => { isSignUp = !isSignUp; signInError = null; }}
+							class="text-sm text-blue-600 hover:text-blue-500"
+						>
+							{isSignUp ? 'Already have an account? Sign in' : 'Need an account? Sign up'}
+						</button>
+					</div>
 				</div>
 				
 				<div class="mt-6">

@@ -69,7 +69,7 @@
 			// Fetch current vote counts
 			const { data: votes } = await supabase
 				.from('votes')
-				.select('vote_type')
+				.select('vote_type,user_id')
 				.eq('statement_id', statement.id);
 
 			if (votes) {
@@ -79,13 +79,7 @@
 
 			// Update current user's vote if logged in
 			if (userId) {
-				const { data: userVote } = await supabase
-					.from('votes')
-					.select('vote_type')
-					.eq('statement_id', statement.id)
-					.eq('user_id', userId)
-					.single();
-
+				const userVote = votes?.find(v => v.user_id === userId)
 				currentUserVote = userVote?.vote_type || null;
 			}
 
