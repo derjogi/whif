@@ -28,28 +28,22 @@
 	});
 	
 	async function loadVoteData() {
-		if (!userId) return;
-		
 		try {
-			// Get user's current vote
-			const { data: userVote } = await supabase
-				.from('votes')
-				.select('vote_type')
-				.eq('statement_id', statement.id)
-				.eq('user_id', userId)
-				.single();
-				
-			currentUserVote = userVote?.vote_type || null;
-			
-			// Get vote counts
+			// Get all votes for the statement
 			const { data: votes } = await supabase
 				.from('votes')
-				.select('vote_type')
+				.select('vote_type, user_id')
 				.eq('statement_id', statement.id);
-				
+
 			if (votes) {
 				upvotes = votes.filter(v => v.vote_type === 1).length;
 				downvotes = votes.filter(v => v.vote_type === -1).length;
+
+				// Set current user's vote if logged in
+				if (userId) {
+					const userVote = votes.find(v => v.user_id === userId);
+					currentUserVote = userVote?.vote_type || null;
+				}
 			}
 		} catch (error) {
 			console.error('Error loading vote data:', error);
@@ -146,7 +140,7 @@
 		<div class="flex items-center space-x-4">
 			<ImpactScore score={calculatedScore} />
 			<div class="text-sm text-gray-500">
-				<span class="font-medium">{upvotes + downvotes}</span> votes
+				<span class="font-medium">{upvotes}</span> upvotes, <span class="font-medium">{downvotes}</span> downvotes
 			</div>
 		</div>
 		
