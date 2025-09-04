@@ -16,7 +16,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 			return json({ error: 'Invalid vote type' }, { status: 400 });
 		}
 
-		const repositories = createRepositories(locals.supabase);
+		const repositories = createRepositories();
 
 		if (voteType === 0) {
 			// Remove vote (toggle off)

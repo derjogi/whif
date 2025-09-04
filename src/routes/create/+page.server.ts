@@ -34,7 +34,7 @@ export const actions: Actions = {
 				return fail(400, { error: 'Idea text exceeds maximum length of 64,000 characters' });
 			}
 
-			const repositories = createRepositories(locals.supabase);
+			const repositories = createRepositories();
 
 			// Todo: Handle files/documents
 

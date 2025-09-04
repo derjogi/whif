@@ -1,59 +1,47 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
 import type { IUserBalanceRepository } from '../interfaces';
 import type { UserBalance, NewUserBalance } from '../schema';
-import { createServiceRoleSupabaseClient } from './serviceRoleSupabase';
+import { db } from '../connection';
+import { userBalances } from '../schema';
+import { eq } from 'drizzle-orm';
 
-export class SupabaseUserBalanceRepository implements IUserBalanceRepository {
-	constructor(private supabase: SupabaseClient, private serviceRoleSupabase?: SupabaseClient) {}
-
+export class DrizzleUserBalanceRepository implements IUserBalanceRepository {
 	async create(data: NewUserBalance): Promise<UserBalance> {
-		const { data: userBalance, error } = await this.supabase
-			.from('user_balances')
-			.insert({
-				user_id: data.userId,
-				balance: data.balance,
-			})
-			.select()
-			.single();
+		const result = await db.insert(userBalances).values({
+			userId: data.userId,
+			balance: data.balance
+		}).returning();
 
-		if (error) throw new Error(`Failed to create user balance: ${error.message}`);
-		return userBalance;
+		if (result.length === 0) {
+			throw new Error('Failed to create user balance: No data returned');
+		}
+		return result[0];
 	}
 
 	async getById(userId: string): Promise<UserBalance | null> {
-		const { data: userBalance, error } = await this.supabase
-			.from('user_balances')
-			.select('*')
-			.eq('user_id', userId)
-			.single();
-
-		if (error && error.code !== 'PGRST116') throw new Error(`Failed to get user balance: ${error.message}`);
-		return userBalance;
+		const result = await db.select().from(userBalances).where(eq(userBalances.userId, userId)).limit(1);
+		return result.length > 0 ? result[0] : null;
 	}
 
-	async update(id: string, data: Partial<NewUserBalance>): Promise<UserBalance> {
-		const updateData: any = {};
-		if (data.userId !== undefined) updateData.user_id = data.userId;
-		if (data.balance !== undefined) updateData.balance = data.balance;
+	async update(userId: string, data: Partial<NewUserBalance>): Promise<UserBalance> {
+		const updateData: Partial<NewUserBalance> = {
+			...data,
+			updatedAt: new Date()
+		};
 
-		const { data: userBalance, error } = await this.supabase
-			.from('user_balances')
-			.update(updateData)
-			.eq('user_id', id)
-			.select()
-			.single();
+		const result = await db
+			.update(userBalances)
+			.set(updateData)
+			.where(eq(userBalances.userId, userId))
+			.returning();
 
-		if (error) throw new Error(`Failed to update user balance: ${error.message}`);
-		return userBalance;
+		if (result.length === 0) {
+			throw new Error('Failed to update user balance: User balance not found');
+		}
+		return result[0];
 	}
 
 	async delete(userId: string): Promise<void> {
-		const { error } = await this.supabase
-			.from('user_balances')
-			.delete()
-			.eq('user_id', userId);
-
-		if (error) throw new Error(`Failed to delete user balance: ${error.message}`);
+		await db.delete(userBalances).where(eq(userBalances.userId, userId));
 	}
 
 	async getByUserId(userId: string): Promise<UserBalance | null> {
@@ -61,41 +49,30 @@ export class SupabaseUserBalanceRepository implements IUserBalanceRepository {
 	}
 
 	async updateBalance(userId: string, newBalance: number): Promise<UserBalance> {
-		// Use SELECT FOR UPDATE to lock the row during the transaction
-		const { data: balance, error } = await this.supabase
-			.from('user_balances')
-			.select('*')
-			.eq('user_id', userId)
-			.single();
-
-		if (error) throw new Error(`Failed to get user balance: ${error.message}`);
-
-		const { data: updatedBalance, error: updateError } = await this.supabase
-			.from('user_balances')
-			.update({
-				balance: newBalance,
-				updated_at: new Date().toISOString()
+		const result = await db
+			.update(userBalances)
+			.set({
+				balance: newBalance.toString(), // Convert to string as per schema
+				updatedAt: new Date()
 			})
-			.eq('user_id', userId)
-			.select()
-			.single();
+			.where(eq(userBalances.userId, userId))
+			.returning();
 
-		if (updateError) throw new Error(`Failed to update user balance: ${updateError.message}`);
-		return updatedBalance;
+		if (result.length === 0) {
+			throw new Error('Failed to update user balance: User balance not found');
+		}
+		return result[0];
 	}
 
 	async createWithInitialBalance(userId: string, initialBalance: number): Promise<UserBalance> {
-		const client = this.serviceRoleSupabase ?? createServiceRoleSupabaseClient();
-		const { data: userBalance, error } = await client
-			.from('user_balances')
-			.insert({
-				user_id: userId,
-				balance: initialBalance,
-			})
-			.select()
-			.single();
+		const result = await db.insert(userBalances).values({
+			userId: userId,
+			balance: initialBalance.toString() // Convert to string as per schema
+		}).returning();
 
-		if (error) throw new Error(`Failed to create user balance with initial balance: ${error.message}`);
-		return userBalance;
+		if (result.length === 0) {
+			throw new Error('Failed to create user balance with initial balance: No data returned');
+		}
+		return result[0];
 	}
 }

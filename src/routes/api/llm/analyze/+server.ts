@@ -20,7 +20,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     }
     
     // Create repositories and balance service
-    const repositories = createRepositories(locals.supabase);
+    const repositories = createRepositories();
     const balanceService = new BalanceService(repositories.userBalances, repositories.balanceTransactions);
     
     // Check user balance (using a slightly higher estimated cost for now, to be on the safe side)

@@ -1,32 +1,31 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-import { SupabaseIdeaRepository } from './ideaRepository';
-import { SupabaseCategoryRepository } from './categoryRepository';
-import { SupabaseDownstreamImpactRepository } from './downstreamImpactRepository';
-import { SupabaseVoteRepository } from './voteRepository';
-import { SupabaseTokenUsageRepository } from './tokenUsageRepository';
-import { SupabaseUserBalanceRepository } from './userBalanceRepository';
-import { SupabaseBalanceTransactionRepository } from './balanceTransactionRepository';
+import { DrizzleIdeaRepository } from './ideaRepository';
+import { DrizzleCategoryRepository } from './categoryRepository';
+import { DrizzleDownstreamImpactRepository } from './downstreamImpactRepository';
+import { DrizzleVoteRepository } from './voteRepository';
+import { DrizzleTokenUsageRepository } from './tokenUsageRepository';
+import { DrizzleUserBalanceRepository } from './userBalanceRepository';
+import { DrizzleBalanceTransactionRepository } from './balanceTransactionRepository';
 
 // Export repository classes
-export { SupabaseIdeaRepository } from './ideaRepository';
-export { SupabaseCategoryRepository } from './categoryRepository';
-export { SupabaseDownstreamImpactRepository } from './downstreamImpactRepository';
-export { SupabaseVoteRepository } from './voteRepository';
-export { SupabaseTokenUsageRepository } from './tokenUsageRepository';
-export { SupabaseUserBalanceRepository } from './userBalanceRepository';
-export { SupabaseBalanceTransactionRepository } from './balanceTransactionRepository';
+export { DrizzleIdeaRepository } from './ideaRepository';
+export { DrizzleCategoryRepository } from './categoryRepository';
+export { DrizzleDownstreamImpactRepository } from './downstreamImpactRepository';
+export { DrizzleVoteRepository } from './voteRepository';
+export { DrizzleTokenUsageRepository } from './tokenUsageRepository';
+export { DrizzleUserBalanceRepository } from './userBalanceRepository';
+export { DrizzleBalanceTransactionRepository } from './balanceTransactionRepository';
 
 // Factory function to create repositories
-export function createRepositories(supabase: SupabaseClient) {
+export function createRepositories() {
  	return {
- 		ideas: new SupabaseIdeaRepository(supabase),
- 		categories: new SupabaseCategoryRepository(supabase),
- 		downstreamImpacts: new SupabaseDownstreamImpactRepository(supabase),
- 		votes: new SupabaseVoteRepository(supabase),
- 		tokenUsage: new SupabaseTokenUsageRepository(supabase),
- 		userBalances: new SupabaseUserBalanceRepository(supabase),
- 		balanceTransactions: new SupabaseBalanceTransactionRepository(supabase),
- 	};
+  		ideas: new DrizzleIdeaRepository(),
+  		categories: new DrizzleCategoryRepository(),
+  		downstreamImpacts: new DrizzleDownstreamImpactRepository(),
+  		votes: new DrizzleVoteRepository(),
+  		tokenUsage: new DrizzleTokenUsageRepository(),
+  		userBalances: new DrizzleUserBalanceRepository(),
+  		balanceTransactions: new DrizzleBalanceTransactionRepository(),
+  	};
 }
 
 // Export types for convenience

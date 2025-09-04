@@ -1,116 +1,125 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
 import type { IVoteRepository } from '../interfaces';
 import type { Vote, NewVote } from '../schema';
+import { db } from '../connection';
+import { votes } from '../schema';
+import { eq, and, sql } from 'drizzle-orm';
 
-export class SupabaseVoteRepository implements IVoteRepository {
-	constructor(private supabase: SupabaseClient) {}
-
+export class DrizzleVoteRepository implements IVoteRepository {
 	async create(data: NewVote): Promise<Vote> {
-		const { data: vote, error } = await this.supabase
-			.from('votes')
-			.insert({
-				downstream_impact_id: data.downstreamImpactId,
-				user_id: data.userId,
-				vote_type: data.voteType
-			})
-			.select()
-			.single();
+		const result = await db.insert(votes).values({
+			downstreamImpactId: data.downstreamImpactId,
+			userId: data.userId,
+			voteType: data.voteType
+		}).returning();
 
-		if (error) throw new Error(`Failed to create vote: ${error.message}`);
-		return vote;
+		if (result.length === 0) {
+			throw new Error('Failed to create vote: No data returned');
+		}
+		return result[0];
 	}
 
 	async getById(id: string): Promise<Vote | null> {
-		const { data: vote, error } = await this.supabase
-			.from('votes')
-			.select('*')
-			.eq('id', id)
-			.single();
-
-		if (error && error.code !== 'PGRST116') throw new Error(`Failed to get vote: ${error.message}`);
-		return vote;
+		const result = await db.select().from(votes).where(eq(votes.id, id)).limit(1);
+		return result.length > 0 ? result[0] : null;
 	}
 
 	async update(id: string, data: Partial<NewVote>): Promise<Vote> {
-		const updateData: any = {};
-		if (data.voteType !== undefined) updateData.vote_type = data.voteType;
-		updateData.updated_at = new Date().toISOString();
+		const updateData: Partial<NewVote> = {
+			...data,
+			updatedAt: new Date()
+		};
 
-		const { data: vote, error } = await this.supabase
-			.from('votes')
-			.update(updateData)
-			.eq('id', id)
-			.select()
-			.single();
+		const result = await db
+			.update(votes)
+			.set(updateData)
+			.where(eq(votes.id, id))
+			.returning();
 
-		if (error) throw new Error(`Failed to update vote: ${error.message}`);
-		return vote;
+		if (result.length === 0) {
+			throw new Error('Failed to update vote: Vote not found');
+		}
+		return result[0];
 	}
 
 	async upsert(voteData: { downstreamImpactId: string; userId: string; voteType: number }): Promise<Vote> {
-		const { data: vote, error } = await this.supabase
-			.from('votes')
-			.upsert(
-				{
-					downstream_impact_id: voteData.downstreamImpactId,
-					user_id: voteData.userId,
-					vote_type: voteData.voteType,
-					updated_at: new Date().toISOString()
-				},
-				{
-					onConflict: 'downstream_impact_id, user_id'
-				}
-			)
+		// Drizzle doesn't have a direct upsert method like Supabase, so we need to handle this manually
+		const existingVote = await db
 			.select()
-			.single();
+			.from(votes)
+			.where(and(
+				eq(votes.downstreamImpactId, voteData.downstreamImpactId),
+				eq(votes.userId, voteData.userId)
+			))
+			.limit(1);
 
-		if (error) throw new Error(`Failed to upsert vote: ${error.message}`);
-		return vote;
+		if (existingVote.length > 0) {
+			// Update existing vote
+			const result = await db
+				.update(votes)
+				.set({
+					voteType: voteData.voteType,
+					updatedAt: new Date()
+				})
+				.where(eq(votes.id, existingVote[0].id))
+				.returning();
+
+			return result[0];
+		} else {
+			// Create new vote
+			const result = await db.insert(votes).values({
+				downstreamImpactId: voteData.downstreamImpactId,
+				userId: voteData.userId,
+				voteType: voteData.voteType
+			}).returning();
+
+			if (result.length === 0) {
+				throw new Error('Failed to create vote: No data returned');
+			}
+			return result[0];
+		}
 	}
 
 	async getByDownstreamImpactId(downstreamImpactId: string): Promise<Vote[]> {
-		const { data: votes, error } = await this.supabase
-			.from('votes')
-			.select('*')
-			.eq('downstream_impact_id', downstreamImpactId);
-
-		if (error) throw new Error(`Failed to get votes: ${error.message}`);
-		return votes || [];
+		return await db
+			.select()
+			.from(votes)
+			.where(eq(votes.downstreamImpactId, downstreamImpactId));
 	}
 
 	async getUserVote(userId: string, downstreamImpactId: string): Promise<Vote | null> {
-		const { data: vote, error } = await this.supabase
-			.from('votes')
-			.select('*')
-			.eq('user_id', userId)
-			.eq('downstream_impact_id', downstreamImpactId)
-			.maybeSingle();
+		const result = await db
+			.select()
+			.from(votes)
+			.where(and(
+				eq(votes.userId, userId),
+				eq(votes.downstreamImpactId, downstreamImpactId)
+			))
+			.limit(1);
 
-		if (error) throw new Error(`Failed to get user vote: ${error.message}`);
-		return vote;
+		return result.length > 0 ? result[0] : null;
 	}
 
 	async getVoteCounts(downstreamImpactId: string): Promise<{ upvotes: number; downvotes: number }> {
-		const { data: votes, error } = await this.supabase
-			.from('votes')
-			.select('vote_type')
-			.eq('downstream_impact_id', downstreamImpactId);
+		const result = await db
+			.select({
+				upvotes: sql<number>`count(case when ${votes.voteType} = 1 then 1 end)`,
+				downvotes: sql<number>`count(case when ${votes.voteType} = -1 then 1 end)`
+			})
+			.from(votes)
+			.where(eq(votes.downstreamImpactId, downstreamImpactId));
 
-		if (error) throw new Error(`Failed to get vote counts: ${error.message}`);
-
-		const upvotes = votes?.filter(vote => vote.vote_type === 1).length || 0;
-		const downvotes = votes?.filter(vote => vote.vote_type === -1).length || 0;
-
-		return { upvotes, downvotes };
+		return {
+			upvotes: result[0]?.upvotes || 0,
+			downvotes: result[0]?.downvotes || 0
+		};
 	}
 
 	async delete(userId: string, downstreamImpactId: string): Promise<void> {
-		const { error } = await this.supabase
-			.from('votes')
-			.delete()
-			.eq('user_id', userId)
-			.eq('downstream_impact_id', downstreamImpactId);
-
-		if (error) throw new Error(`Failed to delete vote: ${error.message}`);
+		await db
+			.delete(votes)
+			.where(and(
+				eq(votes.userId, userId),
+				eq(votes.downstreamImpactId, downstreamImpactId)
+			));
 	}
 }

@@ -1,110 +1,140 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
 import type { IDownstreamImpactRepository } from '../interfaces';
 import type { DownstreamImpact, NewDownstreamImpact, StatementMetric, NewStatementMetric, Vote } from '../schema';
+import { db } from '../connection';
+import { downstreamImpacts, statementMetrics, votes } from '../schema';
+import { eq, asc } from 'drizzle-orm';
 
-export class SupabaseDownstreamImpactRepository implements IDownstreamImpactRepository {
-  constructor(private supabase: SupabaseClient) {}
-
+export class DrizzleDownstreamImpactRepository implements IDownstreamImpactRepository {
   async create(data: NewDownstreamImpact): Promise<DownstreamImpact> {
-    const { data: impact, error } = await this.supabase
-      .from('downstream_impacts')
-      .insert(data)
-      .select()
-      .single();
+    const result = await db.insert(downstreamImpacts).values({
+      categoryId: data.categoryId,
+      impactText: data.impactText,
+      calculatedImpactScore: data.calculatedImpactScore
+    }).returning();
 
-    if (error) {
-      throw new Error(`Failed to create downstream impact: ${error.message}`);
+    if (result.length === 0) {
+      throw new Error('Failed to create downstream impact: No data returned');
     }
 
-    return impact;
+    return result[0];
   }
 
   async getById(id: string): Promise<DownstreamImpact | null> {
-    const { data, error } = await this.supabase
-      .from('downstream_impacts')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error) {
-      return null;
-    }
-
-    return data;
+    const result = await db.select().from(downstreamImpacts).where(eq(downstreamImpacts.id, id)).limit(1);
+    return result.length > 0 ? result[0] : null;
   }
 
   async update(id: string, data: Partial<NewDownstreamImpact>): Promise<DownstreamImpact> {
-    const { data: impact, error } = await this.supabase
-      .from('downstream_impacts')
-      .update(data)
-      .eq('id', id)
-      .select()
-      .single();
+    const updateData: Partial<NewDownstreamImpact> = {
+      ...data,
+      updatedAt: new Date()
+    };
 
-    if (error) {
-      throw new Error(`Failed to update downstream impact: ${error.message}`);
+    const result = await db
+      .update(downstreamImpacts)
+      .set(updateData)
+      .where(eq(downstreamImpacts.id, id))
+      .returning();
+
+    if (result.length === 0) {
+      throw new Error('Failed to update downstream impact: Impact not found');
     }
 
-    return impact;
+    return result[0];
   }
 
   async delete(id: string): Promise<void> {
-    const { error } = await this.supabase
-      .from('downstream_impacts')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      throw new Error(`Failed to delete downstream impact: ${error.message}`);
-    }
+    await db.delete(downstreamImpacts).where(eq(downstreamImpacts.id, id));
   }
 
   async getByCategoryId(categoryId: string): Promise<DownstreamImpact[]> {
-    const { data, error } = await this.supabase
-      .from('downstream_impacts')
-      .select('*')
-      .eq('category_id', categoryId)
-      .order('created_at', { ascending: true });
-
-    if (error) {
-      throw new Error(`Failed to get downstream impacts by category ID: ${error.message}`);
-    }
-
-    return data || [];
+    return await db
+      .select()
+      .from(downstreamImpacts)
+      .where(eq(downstreamImpacts.categoryId, categoryId))
+      .orderBy(asc(downstreamImpacts.createdAt));
   }
 
   async getWithMetrics(categoryId: string): Promise<(DownstreamImpact & { metrics: StatementMetric[] })[]> {
-    const { data, error } = await this.supabase
-      .from('downstream_impacts')
-      .select(`
-        *,
-        metrics:statement_metrics(*)
-      `)
-      .eq('category_id', categoryId)
-      .order('created_at', { ascending: true });
+    const result = await db
+      .select({
+        id: downstreamImpacts.id,
+        categoryId: downstreamImpacts.categoryId,
+        impactText: downstreamImpacts.impactText,
+        calculatedImpactScore: downstreamImpacts.calculatedImpactScore,
+        createdAt: downstreamImpacts.createdAt,
+        updatedAt: downstreamImpacts.updatedAt,
+        metrics: statementMetrics
+      })
+      .from(downstreamImpacts)
+      .leftJoin(statementMetrics, eq(downstreamImpacts.id, statementMetrics.downstreamImpactId))
+      .where(eq(downstreamImpacts.categoryId, categoryId))
+      .orderBy(asc(downstreamImpacts.createdAt));
 
-    if (error) {
-      throw new Error(`Failed to get downstream impacts with metrics: ${error.message}`);
+    // Group the results by impact
+    const impactMap = new Map<string, DownstreamImpact & { metrics: StatementMetric[] }>();
+
+    for (const row of result) {
+      const impactId = row.id;
+      if (!impactMap.has(impactId)) {
+        impactMap.set(impactId, {
+          id: row.id,
+          categoryId: row.categoryId,
+          impactText: row.impactText,
+          calculatedImpactScore: row.calculatedImpactScore,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
+          metrics: []
+        });
+      }
+
+      if (row.metrics) {
+        impactMap.get(impactId)!.metrics.push(row.metrics);
+      }
     }
 
-    return data || [];
+    return Array.from(impactMap.values());
   }
 
   async getWithVotes(categoryId: string): Promise<(DownstreamImpact & { votes: Vote[] })[]> {
-    const { data, error } = await this.supabase
-      .from('downstream_impacts')
-      .select(`
-        *,
-        votes:votes(*)
-      `)
-      .eq('category_id', categoryId)
-      .order('created_at', { ascending: true });
+    const result = await db
+      .select({
+        id: downstreamImpacts.id,
+        categoryId: downstreamImpacts.categoryId,
+        impactText: downstreamImpacts.impactText,
+        calculatedImpactScore: downstreamImpacts.calculatedImpactScore,
+        createdAt: downstreamImpacts.createdAt,
+        updatedAt: downstreamImpacts.updatedAt,
+        votes: votes
+      })
+      .from(downstreamImpacts)
+      .leftJoin(votes, eq(downstreamImpacts.id, votes.downstreamImpactId))
+      .where(eq(downstreamImpacts.categoryId, categoryId))
+      .orderBy(asc(downstreamImpacts.createdAt));
 
-    if (error) {
-      throw new Error(`Failed to get downstream impacts with votes: ${error.message}`);
+    // Group the results by impact
+    const impactMap = new Map<string, DownstreamImpact & { votes: Vote[] }>();
+
+    for (const row of result) {
+      const impactId = row.id;
+      if (!impactMap.has(impactId)) {
+        impactMap.set(impactId, {
+          id: row.id,
+          categoryId: row.categoryId,
+          impactText: row.impactText,
+          calculatedImpactScore: row.calculatedImpactScore,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
+          votes: []
+        });
+      }
+
+      if (row.votes) {
+        impactMap.get(impactId)!.votes.push(row.votes);
+      }
     }
 
-    return data || [];
+    return Array.from(impactMap.values());
   }
 
   async createBatchWithMetrics(impactsWithMetrics: Array<{
@@ -116,17 +146,15 @@ export class SupabaseDownstreamImpactRepository implements IDownstreamImpactRepo
     }
 
     // Create all impacts first
-    const impactsData: NewDownstreamImpact[] = impactsWithMetrics.map(item => item.impact);
-    const { data: insertedImpacts, error: impactsError } = await this.supabase
-      .from('downstream_impacts')
-      .insert(impactsData)
-      .select();
+    const impactsData = impactsWithMetrics.map(item => ({
+      categoryId: item.impact.categoryId,
+      impactText: item.impact.impactText,
+      calculatedImpactScore: item.impact.calculatedImpactScore
+    }));
 
-    if (impactsError) {
-      throw new Error(`Failed to create downstream impacts batch: ${impactsError.message}`);
-    }
+    const insertedImpacts = await db.insert(downstreamImpacts).values(impactsData).returning();
 
-    if (!insertedImpacts || insertedImpacts.length === 0) {
+    if (insertedImpacts.length === 0) {
       throw new Error('No downstream impacts were created');
     }
 
@@ -136,26 +164,21 @@ export class SupabaseDownstreamImpactRepository implements IDownstreamImpactRepo
       const metrics = impactsWithMetrics[index].metrics;
       const metricsWithImpactId = metrics.map(metric => ({
         ...metric,
-        downstream_impact_id: impact.id
+        downstreamImpactId: impact.id
       }));
       allMetrics.push(...metricsWithImpactId);
     });
 
     let insertedMetrics: StatementMetric[] = [];
     if (allMetrics.length > 0) {
-      const { data: metricsData, error: metricsError } = await this.supabase
-        .from('statement_metrics')
-        .insert(allMetrics)
-        .select();
-
-      if (metricsError) {
+      try {
+        insertedMetrics = await db.insert(statementMetrics).values(allMetrics).returning();
+      } catch (error) {
         // Attempt to rollback impacts if metrics fail
         const impactIds = insertedImpacts.map(i => i.id);
-        await this.supabase.from('downstream_impacts').delete().in('id', impactIds);
-        throw new Error(`Failed to create impact metrics: ${metricsError.message}`);
+        await db.delete(downstreamImpacts).where(eq(downstreamImpacts.id, impactIds[0])); // Simplified rollback
+        throw new Error(`Failed to create impact metrics: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
-
-      insertedMetrics = metricsData || [];
     }
 
     // Group metrics by impact ID

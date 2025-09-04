@@ -4,7 +4,7 @@ import { createRepositories } from '$lib/server/database/supabase';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
 	try {
-		const repositories = createRepositories(locals.supabase);
+		const repositories = createRepositories();
 		const idea = await repositories.ideas.getById(params.id);
 		
 		if (!idea) {
@@ -24,7 +24,7 @@ export const PUT: RequestHandler = async ({ params, request, locals }) => {
 	}
 
 	try {
-		const repositories = createRepositories(locals.supabase);
+		const repositories = createRepositories();
 		const updates = await request.json();
 		
 		// Ensure user can only update their own ideas
@@ -47,7 +47,7 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 	}
 
 	try {
-		const repositories = createRepositories(locals.supabase);
+		const repositories = createRepositories();
 		
 		// Ensure user can only delete their own ideas
 		const existingIdea = await repositories.ideas.getById(params.id);
