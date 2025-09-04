@@ -4,7 +4,7 @@ import { db } from '../connection';
 import { votes } from '../schema';
 import { eq, and, sql } from 'drizzle-orm';
 
-export class DrizzleVoteRepository implements IVoteRepository {
+export class VoteRepository implements IVoteRepository {
 	async create(data: NewVote): Promise<Vote> {
 		const result = await db.insert(votes).values({
 			downstreamImpactId: data.downstreamImpactId,

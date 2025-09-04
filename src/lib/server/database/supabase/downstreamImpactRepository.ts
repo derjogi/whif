@@ -4,7 +4,7 @@ import { db } from '../connection';
 import { downstreamImpacts, statementMetrics, votes } from '../schema';
 import { eq, asc } from 'drizzle-orm';
 
-export class DrizzleDownstreamImpactRepository implements IDownstreamImpactRepository {
+export class DownstreamImpactRepository implements IDownstreamImpactRepository {
   async create(data: NewDownstreamImpact): Promise<DownstreamImpact> {
     const result = await db.insert(downstreamImpacts).values({
       categoryId: data.categoryId,

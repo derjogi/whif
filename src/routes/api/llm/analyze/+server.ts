@@ -6,14 +6,14 @@ import { createRepositories } from '../../../../lib/server/database/supabase';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   try {
-
-    console.log(`Analyzing ${request}`)
     // Check if user is authenticated
     if (!locals.user) {
       return json({ error: 'Authentication required' }, { status: 401 });
     }
-    
+
     const { proposal } = await request.json();
+
+    console.log(`Analyzing ${typeof proposal === 'string' ? proposal : JSON.stringify(proposal)}`)
     
     if (!proposal) {
       return json({ error: 'Proposal is required' }, { status: 400 });
@@ -51,6 +51,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     const result = await invokeWithTracing(llmWorkflow, initialState);
     
     // Store results in database
+    const errors = [];
     try {
       // First, create an idea record for this proposal
       const proposalTitle = typeof proposal === 'string' ? proposal : proposal.title || 'Untitled Proposal';
@@ -93,6 +94,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
             console.log(`Successfully stored category "${categoryName}" with ${impactArray?.length || 0} downstream impacts`);
           } catch (error) {
             console.error(`Error creating category "${categoryName}":`, error);
+            errors.push(`Category "${categoryName}": ${error instanceof Error ? error.message : 'Unknown error'}`);
           }
         }
       }
@@ -100,11 +102,12 @@ export const POST: RequestHandler = async ({ request, locals }) => {
       console.log(`Analysis stored for idea ID: ${newIdea.id}`);
     } catch (dbError) {
       console.error('Failed to store analysis results:', dbError);
-      // Continue with response even if database storage fails
+      // Insert this error at the first position:
+      errors.unshift(`Failed to store analysis results: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`);
     }
 
     return json({
-      success: true,
+      success: errors.length === 0,
       analysis: result
     });
   } catch (error) {

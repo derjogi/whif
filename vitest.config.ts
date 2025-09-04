@@ -6,6 +6,19 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['./src/test/setup.ts']
+    setupFiles: ['./src/test/setup.ts'],
+    // Reduce setup time and suppress deprecation warnings
+    pool: 'threads',
+    poolOptions: {
+      threads: {
+        singleThread: true
+      }
+    },
+    // Suppress punycode deprecation warning
+    server: {
+      deps: {
+        inline: [/punycode/]
+      }
+    }
   }
 });

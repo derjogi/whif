@@ -8,7 +8,7 @@ export default defineConfig({
 	out: './drizzle',
 	dialect: 'postgresql',
 	dbCredentials: {
-		url: process.env.DATABASE_URL || ''
+		url:`postgresql://postgres:${process.env.PUBLIC_SUPABASE_HOST}@${process.env.SUPABASE_SERVICE_ROLE_KEY}/postgres`
 	},
 	verbose: true,
 	strict: true,

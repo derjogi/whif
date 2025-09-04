@@ -4,7 +4,7 @@ import { db } from '../connection';
 import { balanceTransactions } from '../schema';
 import { eq, gte, lte, desc, and } from 'drizzle-orm';
 
-export class DrizzleBalanceTransactionRepository implements IBalanceTransactionRepository {
+export class BalanceTransactionRepository implements IBalanceTransactionRepository {
 	async create(data: NewBalanceTransaction): Promise<BalanceTransaction> {
 		const result = await db.insert(balanceTransactions).values({
 			userId: data.userId,

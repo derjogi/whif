@@ -4,7 +4,7 @@ import { db } from '../connection';
 import { ideas } from '../schema';
 import { eq, desc } from 'drizzle-orm';
 
-export class DrizzleIdeaRepository implements IIdeaRepository {
+export class IdeaRepository implements IIdeaRepository {
 	async create(data: NewIdea): Promise<Idea> {
 		const result = await db.insert(ideas).values({
 			userId: data.userId,

@@ -1,30 +1,30 @@
-import { DrizzleIdeaRepository } from './ideaRepository';
-import { DrizzleCategoryRepository } from './categoryRepository';
-import { DrizzleDownstreamImpactRepository } from './downstreamImpactRepository';
-import { DrizzleVoteRepository } from './voteRepository';
-import { DrizzleTokenUsageRepository } from './tokenUsageRepository';
-import { DrizzleUserBalanceRepository } from './userBalanceRepository';
-import { DrizzleBalanceTransactionRepository } from './balanceTransactionRepository';
+import { IdeaRepository } from './ideaRepository';
+import { CategoryRepository } from './categoryRepository';
+import { DownstreamImpactRepository } from './downstreamImpactRepository';
+import { VoteRepository } from './voteRepository';
+import { TokenUsageRepository } from './tokenUsageRepository';
+import { UserBalanceRepository } from './userBalanceRepository';
+import { BalanceTransactionRepository } from './balanceTransactionRepository';
 
 // Export repository classes
-export { DrizzleIdeaRepository } from './ideaRepository';
-export { DrizzleCategoryRepository } from './categoryRepository';
-export { DrizzleDownstreamImpactRepository } from './downstreamImpactRepository';
-export { DrizzleVoteRepository } from './voteRepository';
-export { DrizzleTokenUsageRepository } from './tokenUsageRepository';
-export { DrizzleUserBalanceRepository } from './userBalanceRepository';
-export { DrizzleBalanceTransactionRepository } from './balanceTransactionRepository';
+export { IdeaRepository as DrizzleIdeaRepository } from './ideaRepository';
+export { CategoryRepository as DrizzleCategoryRepository } from './categoryRepository';
+export { DownstreamImpactRepository as DrizzleDownstreamImpactRepository } from './downstreamImpactRepository';
+export { VoteRepository as DrizzleVoteRepository } from './voteRepository';
+export { TokenUsageRepository as DrizzleTokenUsageRepository } from './tokenUsageRepository';
+export { UserBalanceRepository as DrizzleUserBalanceRepository } from './userBalanceRepository';
+export { BalanceTransactionRepository as DrizzleBalanceTransactionRepository } from './balanceTransactionRepository';
 
 // Factory function to create repositories
 export function createRepositories() {
  	return {
-  		ideas: new DrizzleIdeaRepository(),
-  		categories: new DrizzleCategoryRepository(),
-  		downstreamImpacts: new DrizzleDownstreamImpactRepository(),
-  		votes: new DrizzleVoteRepository(),
-  		tokenUsage: new DrizzleTokenUsageRepository(),
-  		userBalances: new DrizzleUserBalanceRepository(),
-  		balanceTransactions: new DrizzleBalanceTransactionRepository(),
+  		ideas: new IdeaRepository(),
+  		categories: new CategoryRepository(),
+  		downstreamImpacts: new DownstreamImpactRepository(),
+  		votes: new VoteRepository(),
+  		tokenUsage: new TokenUsageRepository(),
+  		userBalances: new UserBalanceRepository(),
+  		balanceTransactions: new BalanceTransactionRepository(),
   	};
 }
 

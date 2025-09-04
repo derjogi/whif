@@ -4,7 +4,7 @@ import { db } from '../connection';
 import { tokenUsage } from '../schema';
 import { eq, desc, asc, sql } from 'drizzle-orm';
 
-export class DrizzleTokenUsageRepository implements ITokenUsageRepository {
+export class TokenUsageRepository implements ITokenUsageRepository {
 	async create(data: NewTokenUsage): Promise<TokenUsage> {
 		const result = await db.insert(tokenUsage).values({
 			userId: data.userId,
