@@ -1,4 +1,4 @@
-import type { Idea, NewIdea, IdeaDocument, NewIdeaDocument, Statement, NewStatement, StatementMetric, NewStatementMetric, Vote, NewVote, User, NewUser, TokenUsage, NewTokenUsage, UserBalance, NewUserBalance, BalanceTransaction, NewBalanceTransaction } from './schema';
+import type { Idea, NewIdea, IdeaDocument, NewIdeaDocument, Category, NewCategory, DownstreamImpact, NewDownstreamImpact, StatementMetric, NewStatementMetric, Vote, NewVote, User, NewUser, TokenUsage, NewTokenUsage, UserBalance, NewUserBalance, BalanceTransaction, NewBalanceTransaction } from './schema';
 
 /**
  * We're using a database interface so that in the future we could easily 
@@ -21,20 +21,31 @@ export interface IIdeaRepository extends IBaseRepository<Idea, NewIdea> {
 	unpublish(id: string, userId: string): Promise<Idea>;
 }
 
-// Statement repository interface
-export interface IStatementRepository extends IBaseRepository<Statement, NewStatement> {
-	getByIdeaId(ideaId: string): Promise<Statement[]>;
-	getWithMetrics(ideaId: string): Promise<(Statement & { metrics: StatementMetric[] })[]>;
-	getWithVotes(ideaId: string): Promise<(Statement & { votes: Vote[] })[]>;
+// Category repository interface
+export interface ICategoryRepository extends IBaseRepository<Category, NewCategory> {
+ 	getByIdeaId(ideaId: string): Promise<Category[]>;
+ 	getWithDownstreamImpacts(ideaId: string): Promise<(Category & { downstreamImpacts: DownstreamImpact[] })[]>;
 }
+
+// Downstream impact repository interface
+export interface IDownstreamImpactRepository extends IBaseRepository<DownstreamImpact, NewDownstreamImpact> {
+ 	getByCategoryId(categoryId: string): Promise<DownstreamImpact[]>;
+ 	getWithMetrics(categoryId: string): Promise<(DownstreamImpact & { metrics: StatementMetric[] })[]>;
+ 	getWithVotes(categoryId: string): Promise<(DownstreamImpact & { votes: Vote[] })[]>;
+ 	createBatchWithMetrics(impactsWithMetrics: Array<{
+    impact: NewDownstreamImpact;
+    metrics: NewStatementMetric[];
+  }>): Promise<(DownstreamImpact & { metrics: StatementMetric[] })[]>;
+}
+
 
 // Vote repository interface - extends base but overrides delete method
 export interface IVoteRepository extends Omit<IBaseRepository<Vote, NewVote>, 'delete'> {
-	upsert(voteData: { statementId: string; userId: string; voteType: number }): Promise<Vote>;
-	getByStatementId(statementId: string): Promise<Vote[]>;
-	getUserVote(userId: string, statementId: string): Promise<Vote | null>;
-	getVoteCounts(statementId: string): Promise<{ upvotes: number; downvotes: number }>;
-	delete(userId: string, statementId: string): Promise<void>;
+ 	upsert(voteData: { downstreamImpactId: string; userId: string; voteType: number }): Promise<Vote>;
+ 	getByDownstreamImpactId(downstreamImpactId: string): Promise<Vote[]>;
+ 	getUserVote(userId: string, downstreamImpactId: string): Promise<Vote | null>;
+ 	getVoteCounts(downstreamImpactId: string): Promise<{ upvotes: number; downvotes: number }>;
+ 	delete(userId: string, downstreamImpactId: string): Promise<void>;
 }
 
 // Document repository interface
@@ -45,17 +56,18 @@ export interface IDocumentRepository extends IBaseRepository<IdeaDocument, NewId
 
 // Unit of Work interface for transactions
 export interface IUnitOfWork {
-	ideas: IIdeaRepository;
-	statements: IStatementRepository;
-	votes: IVoteRepository;
-	documents: IDocumentRepository;
-	tokenUsage: ITokenUsageRepository;
-	userBalances: IUserBalanceRepository;
-	balanceTransactions: IBalanceTransactionRepository;
-	
-	beginTransaction(): Promise<void>;
-	commit(): Promise<void>;
-	rollback(): Promise<void>;
+ 	ideas: IIdeaRepository;
+ 	categories: ICategoryRepository;
+ 	downstreamImpacts: IDownstreamImpactRepository;
+ 	votes: IVoteRepository;
+ 	documents: IDocumentRepository;
+ 	tokenUsage: ITokenUsageRepository;
+ 	userBalances: IUserBalanceRepository;
+ 	balanceTransactions: IBalanceTransactionRepository;
+
+ 	beginTransaction(): Promise<void>;
+ 	commit(): Promise<void>;
+ 	rollback(): Promise<void>;
 }
 
 // Token usage repository interface

@@ -9,7 +9,7 @@
 	import LoadingSkeleton from '$lib/components/LoadingSkeleton.svelte';
 	
 	let idea: any = null;
-	let statements: any[] = [];
+	let categories: any[] = [];
 	let loading = true;
 	let error: string | null = null;
 	
@@ -31,19 +31,22 @@
 			if (ideaError) throw ideaError;
 			idea = ideaData;
 			
-			// Load statements with metrics
-			const { data: statementsData, error: statementsError } = await supabase
-				.from('statements')
+			// Load categories with downstream impacts
+			const { data: categoriesData, error: categoriesError } = await supabase
+				.from('categories')
 				.select(`
 					*,
-					statement_metrics(*),
-					votes(vote_type)
+					downstream_impacts(
+						*,
+						statement_metrics(*),
+						votes(vote_type)
+					)
 				`)
 				.eq('idea_id', ideaId)
 				.order('created_at', { ascending: false });
-				
-			if (statementsError) throw statementsError;
-			statements = statementsData || [];
+
+			if (categoriesError) throw categoriesError;
+			categories = categoriesData || [];
 			
 		} catch (err) {
 			console.error('Error loading idea data:', err);
@@ -104,14 +107,14 @@
 		<div class="mt-8">
 			<h2 class="text-2xl font-bold text-gray-900 mb-6">Impact Analysis</h2>
 			
-			{#if statements.length === 0}
+			{#if categories.length === 0}
 				<div class="text-center py-12 bg-gray-50 rounded-lg">
 					<Icon icon="mdi:brain" class="w-16 h-16 text-gray-400 mx-auto mb-4" />
 					<h3 class="text-lg font-medium text-gray-900 mb-2">No Analysis Results Yet</h3>
 					<p class="text-gray-600">The AI analysis is still in progress or has not been completed.</p>
 				</div>
 			{:else}
-				<StatementList {statements} ideaId={idea.id} />
+				<StatementList {categories} ideaId={idea.id} />
 			{/if}
 		</div>
 		

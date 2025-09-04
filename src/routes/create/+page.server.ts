@@ -1,7 +1,6 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { createRepositories } from '$lib/server/database/supabase';
-import { llmAPI } from '$lib/api/client';
 
 export const load: PageServerLoad = async ({ url, locals: { session } }) => {
 	if (!session?.user) {
@@ -48,15 +47,25 @@ export const actions: Actions = {
 				published: false
 			});
 
+			console.log(`Created idea with ID: ${idea.id}`);
+
 			// Trigger AI analysis
 			try {
-				await llmAPI.analyze({
-					ideaId: idea.id,
-					proposal: {
-						title: title.trim(),
-						text: ideaText.trim()
-					}
+				const analysisResponse = await fetch('/api/llm/analyze', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({
+						proposal: {
+							title: title.trim(),
+							text: ideaText.trim()
+						}
+					}),
 				});
+
+				const analysis = await analysisResponse.json();
+				console.log(`Created analysis: ${JSON.stringify(analysis)}`);
 			} catch (error) {
 				console.error('Failed to trigger AI analysis:', error);
 				// Don't fail the entire request if AI analysis fails

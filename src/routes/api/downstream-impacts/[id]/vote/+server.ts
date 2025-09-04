@@ -10,22 +10,22 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 	try {
 		const { voteType } = await request.json();
 		console.log('Vote type requested:', voteType);
-		
+
 		// Validate vote type
 		if (![1, -1, 0].includes(voteType)) {
 			return json({ error: 'Invalid vote type' }, { status: 400 });
 		}
 
 		const repositories = createRepositories(locals.supabase);
-		
+
 		if (voteType === 0) {
 			// Remove vote (toggle off)
-			console.log(`Deleting vote for user ${locals.user.id} on statement ${params.id}`);
+			console.log(`Deleting vote for user ${locals.user.id} on downstream impact ${params.id}`);
 			await repositories.votes.delete(locals.user.id, params.id);
 			console.log('Vote deleted successfully');
 		} else {
 			// Upsert vote
-			console.log(`Upserting vote type ${voteType} for user ${locals.user.id} on statement ${params.id}`);
+			console.log(`Upserting vote type ${voteType} for user ${locals.user.id} on downstream impact ${params.id}`);
 			await repositories.votes.upsert({
 				downstreamImpactId: params.id,
 				userId: locals.user.id,
@@ -37,7 +37,7 @@ export const POST: RequestHandler = async ({ params, request, locals }) => {
 		console.log('Vote operation completed, expecting realtime update');
 		return json({ success: true });
 	} catch (error) {
-		console.error(`Vote action failed for statement ${params.id}:`, error);
+		console.error(`Vote action failed for downstream impact ${params.id}:`, error);
 		return json({ error: 'Vote failed' }, { status: 500 });
 	}
 };

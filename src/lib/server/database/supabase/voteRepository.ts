@@ -9,7 +9,7 @@ export class SupabaseVoteRepository implements IVoteRepository {
 		const { data: vote, error } = await this.supabase
 			.from('votes')
 			.insert({
-				statement_id: data.statementId,
+				downstream_impact_id: data.downstreamImpactId,
 				user_id: data.userId,
 				vote_type: data.voteType
 			})
@@ -47,18 +47,18 @@ export class SupabaseVoteRepository implements IVoteRepository {
 		return vote;
 	}
 
-	async upsert(voteData: { statementId: string; userId: string; voteType: number }): Promise<Vote> {
+	async upsert(voteData: { downstreamImpactId: string; userId: string; voteType: number }): Promise<Vote> {
 		const { data: vote, error } = await this.supabase
 			.from('votes')
 			.upsert(
 				{
-					statement_id: voteData.statementId,
+					downstream_impact_id: voteData.downstreamImpactId,
 					user_id: voteData.userId,
 					vote_type: voteData.voteType,
 					updated_at: new Date().toISOString()
 				},
 				{
-					onConflict: 'statement_id, user_id'
+					onConflict: 'downstream_impact_id, user_id'
 				}
 			)
 			.select()
@@ -68,33 +68,33 @@ export class SupabaseVoteRepository implements IVoteRepository {
 		return vote;
 	}
 
-	async getByStatementId(statementId: string): Promise<Vote[]> {
+	async getByDownstreamImpactId(downstreamImpactId: string): Promise<Vote[]> {
 		const { data: votes, error } = await this.supabase
 			.from('votes')
 			.select('*')
-			.eq('statement_id', statementId);
+			.eq('downstream_impact_id', downstreamImpactId);
 
 		if (error) throw new Error(`Failed to get votes: ${error.message}`);
 		return votes || [];
 	}
 
-	async getUserVote(userId: string, statementId: string): Promise<Vote | null> {
+	async getUserVote(userId: string, downstreamImpactId: string): Promise<Vote | null> {
 		const { data: vote, error } = await this.supabase
 			.from('votes')
 			.select('*')
 			.eq('user_id', userId)
-			.eq('statement_id', statementId)
+			.eq('downstream_impact_id', downstreamImpactId)
 			.maybeSingle();
 
 		if (error) throw new Error(`Failed to get user vote: ${error.message}`);
 		return vote;
 	}
 
-	async getVoteCounts(statementId: string): Promise<{ upvotes: number; downvotes: number }> {
+	async getVoteCounts(downstreamImpactId: string): Promise<{ upvotes: number; downvotes: number }> {
 		const { data: votes, error } = await this.supabase
 			.from('votes')
 			.select('vote_type')
-			.eq('statement_id', statementId);
+			.eq('downstream_impact_id', downstreamImpactId);
 
 		if (error) throw new Error(`Failed to get vote counts: ${error.message}`);
 
@@ -104,12 +104,12 @@ export class SupabaseVoteRepository implements IVoteRepository {
 		return { upvotes, downvotes };
 	}
 
-	async delete(userId: string, statementId: string): Promise<void> {
+	async delete(userId: string, downstreamImpactId: string): Promise<void> {
 		const { error } = await this.supabase
 			.from('votes')
 			.delete()
 			.eq('user_id', userId)
-			.eq('statement_id', statementId);
+			.eq('downstream_impact_id', downstreamImpactId);
 
 		if (error) throw new Error(`Failed to delete vote: ${error.message}`);
 	}

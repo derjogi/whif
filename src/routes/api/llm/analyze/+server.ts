@@ -6,6 +6,8 @@ import { createRepositories } from '../../../../lib/server/database/supabase';
 
 export const POST: RequestHandler = async ({ request, locals }) => {
   try {
+
+    console.log(`Analyzing ${request}`)
     // Check if user is authenticated
     if (!locals.user) {
       return json({ error: 'Authentication required' }, { status: 401 });
@@ -51,58 +53,50 @@ export const POST: RequestHandler = async ({ request, locals }) => {
     // Store results in database
     try {
       // First, create an idea record for this proposal
-      const proposalText = typeof proposal === 'string' ? proposal : JSON.stringify(proposal);
+      const proposalTitle = typeof proposal === 'string' ? proposal : proposal.title || 'Untitled Proposal';
+      const proposalText = typeof proposal === 'string' ? proposal : proposal.text || proposal.description || '';
       const newIdea = await repositories.ideas.create({
         userId: locals.user.id,
-        title: `Analysis: ${proposalText.substring(0, 100)}...`,
+        title: proposalTitle,
         text: proposalText,
         summary: result.finalSummary || '',
         published: false
       });
 
-      // Store extracted statements using statementRepository
-      if (result.extractedStatements && result.extractedStatements.length > 0) {
-        const statementsWithMetrics = result.extractedStatements.map((statement: any, index: number) => {
-          const statementText = statement.text || statement;
-          const impactScore = statement.impactScore || '0.50';
-          
-          // Create statement data
-          const statementData = {
-            idea_id: newIdea.id,
-            text: statementText,
-            calculated_impact_score: impactScore
-          };
-          
-          // Create metrics from evaluatedScores
-          const metrics = [];
-          const scores = result.evaluatedScores[index] || {};
-          
-          for (const [metricName, metricValue] of Object.entries(scores)) {
-            if (typeof metricValue === 'number') {
-              metrics.push({
-                metricName,
-                metricValue: metricValue.toString()
-              });
-            }
-          }
-          
-          return {
-            statement: statementData,
-            metrics
-          };
-        });
-        
-        // Use statementRepository to create statements with metrics in batch
-        if (statementsWithMetrics.length > 0) {
+      // Store categories and downstream impacts
+      if (result.groupedCategories && Object.keys(result.groupedCategories).length > 0) {
+        for (const [categoryName, impacts] of Object.entries(result.groupedCategories)) {
           try {
-            await repositories.statements.createBatchWithMetrics(statementsWithMetrics);
-            console.log(`Successfully stored ${statementsWithMetrics.length} statements with metrics`);
+            // Create category
+            const category = await repositories.categories.create({
+              ideaId: newIdea.id,
+              name: categoryName,
+              researchFindings: result.researchFindings?.[categoryName] || '',
+              evaluatedScore: result.evaluatedScores?.[categoryName] || 0.5
+            });
+
+            // Create downstream impacts for this category
+            const impactArray = impacts as string[];
+            if (impactArray && impactArray.length > 0) {
+              const impactsWithMetrics = impactArray.map((impact: string) => ({
+                impact: {
+                  categoryId: category.id,
+                  impactText: impact,
+                  calculatedImpactScore: result.evaluatedScores?.[categoryName] || 0.5
+                },
+                metrics: [] // Could add metrics here if needed
+              }));
+
+              await repositories.downstreamImpacts.createBatchWithMetrics(impactsWithMetrics);
+            }
+
+            console.log(`Successfully stored category "${categoryName}" with ${impactArray?.length || 0} downstream impacts`);
           } catch (error) {
-            console.error('Error creating statements with metrics:', error);
+            console.error(`Error creating category "${categoryName}":`, error);
           }
         }
       }
-      
+
       console.log(`Analysis stored for idea ID: ${newIdea.id}`);
     } catch (dbError) {
       console.error('Failed to store analysis results:', dbError);

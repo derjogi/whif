@@ -1,7 +1,5 @@
 {
-  "id": "03df335c-b9f7-4b09-97d7-68f55c02077b",
-  "prevId": "00000000-0000-0000-0000-000000000000",
-  "version": "6",
+  "version": "7",
   "dialect": "postgresql",
   "tables": {
     "public.idea_documents": {
@@ -65,19 +63,22 @@
         "idea_documents_idea_id_ideas_id_fk": {
           "name": "idea_documents_idea_id_ideas_id_fk",
           "tableFrom": "idea_documents",
-          "tableTo": "ideas",
           "columnsFrom": [
             "idea_id"
           ],
+          "tableTo": "ideas",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.ideas": {
       "name": "ideas",
@@ -141,19 +142,22 @@
         "ideas_user_id_users_id_fk": {
           "name": "ideas_user_id_users_id_fk",
           "tableFrom": "ideas",
-          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.statement_metrics": {
       "name": "statement_metrics",
@@ -197,19 +201,22 @@
         "statement_metrics_statement_id_statements_id_fk": {
           "name": "statement_metrics_statement_id_statements_id_fk",
           "tableFrom": "statement_metrics",
-          "tableTo": "statements",
           "columnsFrom": [
             "statement_id"
           ],
+          "tableTo": "statements",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.statements": {
       "name": "statements",
@@ -261,19 +268,22 @@
         "statements_idea_id_ideas_id_fk": {
           "name": "statements_idea_id_ideas_id_fk",
           "tableFrom": "statements",
-          "tableTo": "ideas",
           "columnsFrom": [
             "idea_id"
           ],
+          "tableTo": "ideas",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.users": {
       "name": "users",
@@ -302,7 +312,10 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
+      "uniqueConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     },
     "public.votes": {
       "name": "votes",
@@ -353,41 +366,44 @@
         "votes_statement_id_statements_id_fk": {
           "name": "votes_statement_id_statements_id_fk",
           "tableFrom": "votes",
-          "tableTo": "statements",
           "columnsFrom": [
             "statement_id"
           ],
+          "tableTo": "statements",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         },
         "votes_user_id_users_id_fk": {
           "name": "votes_user_id_users_id_fk",
           "tableFrom": "votes",
-          "tableTo": "users",
           "columnsFrom": [
             "user_id"
           ],
+          "tableTo": "users",
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
+          "onUpdate": "no action",
+          "onDelete": "cascade"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "votes_statement_id_user_id_unique": {
           "name": "votes_statement_id_user_id_unique",
-          "nullsNotDistinct": false,
           "columns": [
             "statement_id",
             "user_id"
-          ]
+          ],
+          "nullsNotDistinct": false
         }
-      }
+      },
+      "policies": {},
+      "isRLSEnabled": false,
+      "checkConstraints": {}
     }
   },
   "enums": {
@@ -402,8 +418,14 @@
   },
   "schemas": {},
   "_meta": {
-    "columns": {},
     "schemas": {},
-    "tables": {}
-  }
+    "tables": {},
+    "columns": {}
+  },
+  "id": "03df335c-b9f7-4b09-97d7-68f55c02077b",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "sequences": {},
+  "policies": {},
+  "views": {},
+  "roles": {}
 }

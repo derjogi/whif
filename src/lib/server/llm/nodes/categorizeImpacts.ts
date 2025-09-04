@@ -8,7 +8,7 @@ import { callWithRetry } from "../retryUtils";
 
 // Define the output schema
 const outputSchema = z.object({
-  categories: z.record(z.array(z.string())).describe("Object with category names as keys and arrays of impact statements as values"),
+  categories: z.record(z.string(), z.array(z.string()))
 });
 
 const parser = StructuredOutputParser.fromZodSchema(outputSchema);

@@ -27,10 +27,20 @@ export const ideaDocuments = pgTable('idea_documents', {
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 });
 
-export const statements = pgTable('statements', {
+export const categories = pgTable('categories', {
   id: uuid('id').primaryKey().defaultRandom(),
   ideaId: uuid('idea_id').notNull().references(() => ideas.id, { onDelete: 'cascade' }),
-  text: text('text').notNull(),
+  name: text('name').notNull(),
+  researchFindings: text('research_findings'),
+  evaluatedScore: numeric('evaluated_score', { precision: 3, scale: 2 }).default('0.50').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export const downstreamImpacts = pgTable('downstream_impacts', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  categoryId: uuid('category_id').notNull().references(() => categories.id, { onDelete: 'cascade' }),
+  impactText: text('impact_text').notNull(),
   calculatedImpactScore: numeric('calculated_impact_score', { precision: 3, scale: 2 }).default('0.50').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
@@ -38,25 +48,25 @@ export const statements = pgTable('statements', {
 
 export const statementMetrics = pgTable('statement_metrics', {
   id: uuid('id').primaryKey().defaultRandom(),
-  statementId: uuid('statement_id').notNull().references(() => statements.id, { onDelete: 'cascade' }),
+  downstreamImpactId: uuid('downstream_impact_id').notNull().references(() => downstreamImpacts.id, { onDelete: 'cascade' }),
   metricName: text('metric_name').notNull(),
   metricValue: numeric('metric_value', { precision: 3, scale: 2 }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
-}, (t) => ({
-  metricBounds: check('metric_bounds', sql`${t.metricValue} >= -1 AND ${t.metricValue} <= 1`)
-}));
+}, (t) => ([
+  check('metric_bounds', sql`${t.metricValue} >= -1 AND ${t.metricValue} <= 1`)
+]));
 
 export const votes = pgTable('votes', {
   id: uuid('id').primaryKey().defaultRandom(),
-  statementId: uuid('statement_id').notNull().references(() => statements.id, { onDelete: 'cascade' }),
+  downstreamImpactId: uuid('downstream_impact_id').notNull().references(() => downstreamImpacts.id, { onDelete: 'cascade' }),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   voteType: integer('vote_type').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
-}, (t) => ({
-  uniqueVote: unique().on(t.statementId, t.userId),
-  voteTypeCheck: check('vote_type_check', sql`${t.voteType} IN (1, -1)`)
-}));
+}, (t) => ([
+  unique().on(t.downstreamImpactId, t.userId),
+  check('vote_type_check', sql`${t.voteType} IN (1, -1)`)
+]));
 
 // Placeholder users table (Supabase Auth handles this, but we need it for relations)
 export const users = pgTable('users', {
@@ -72,7 +82,7 @@ export const ideasRelations = relations(ideas, ({ one, many }) => ({
     references: [users.id],
   }),
   documents: many(ideaDocuments),
-  statements: many(statements),
+  categories: many(categories),
 }));
 
 export const ideaDocumentsRelations = relations(ideaDocuments, ({ one }) => ({
@@ -82,26 +92,35 @@ export const ideaDocumentsRelations = relations(ideaDocuments, ({ one }) => ({
   }),
 }));
 
-export const statementsRelations = relations(statements, ({ one, many }) => ({
+export const categoriesRelations = relations(categories, ({ one, many }) => ({
   idea: one(ideas, {
-    fields: [statements.ideaId],
+    fields: [categories.ideaId],
     references: [ideas.id],
+  }),
+  downstreamImpacts: many(downstreamImpacts),
+}));
+
+export const downstreamImpactsRelations = relations(downstreamImpacts, ({ one, many }) => ({
+  category: one(categories, {
+    fields: [downstreamImpacts.categoryId],
+    references: [categories.id],
   }),
   metrics: many(statementMetrics),
   votes: many(votes),
 }));
 
+
 export const statementMetricsRelations = relations(statementMetrics, ({ one }) => ({
-  statement: one(statements, {
-    fields: [statementMetrics.statementId],
-    references: [statements.id],
+  downstreamImpact: one(downstreamImpacts, {
+    fields: [statementMetrics.downstreamImpactId],
+    references: [downstreamImpacts.id],
   }),
 }));
 
 export const votesRelations = relations(votes, ({ one }) => ({
-  statement: one(statements, {
-    fields: [votes.statementId],
-    references: [statements.id],
+  downstreamImpact: one(downstreamImpacts, {
+    fields: [votes.downstreamImpactId],
+    references: [downstreamImpacts.id],
   }),
   user: one(users, {
     fields: [votes.userId],
@@ -119,8 +138,10 @@ export type Idea = typeof ideas.$inferSelect;
 export type NewIdea = typeof ideas.$inferInsert;
 export type IdeaDocument = typeof ideaDocuments.$inferSelect;
 export type NewIdeaDocument = typeof ideaDocuments.$inferInsert;
-export type Statement = typeof statements.$inferSelect;
-export type NewStatement = typeof statements.$inferInsert;
+export type Category = typeof categories.$inferSelect;
+export type NewCategory = typeof categories.$inferInsert;
+export type DownstreamImpact = typeof downstreamImpacts.$inferSelect;
+export type NewDownstreamImpact = typeof downstreamImpacts.$inferInsert;
 export type StatementMetric = typeof statementMetrics.$inferSelect;
 export type NewStatementMetric = typeof statementMetrics.$inferInsert;
 export type Vote = typeof votes.$inferSelect;

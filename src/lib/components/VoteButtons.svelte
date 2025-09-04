@@ -2,10 +2,15 @@
 	import Icon from '@iconify/svelte';
 	import { supabase } from '$lib/supabase/client';
 	
-	export let statementId: string;
+	export let statementId: string | undefined = undefined;
+	export let downstreamImpactId: string | undefined = undefined;
 	export let currentUserVote: number | null;
 	export let upvotes: number;
 	export let downvotes: number;
+
+	// Use downstreamImpactId if provided, otherwise fall back to statementId for backward compatibility
+	$: targetId = downstreamImpactId || statementId;
+	$: apiEndpoint = downstreamImpactId ? `/api/downstream-impacts/${targetId}/vote` : `/api/statements/${targetId}/vote`;
 	
 	let isVoting = false;
 	
@@ -20,7 +25,7 @@
 			console.log("Sending vote... ", newVoteType)
 
 			// Send vote to API endpoint
-			const response = await fetch(`/api/statements/${statementId}/vote`, {
+			const response = await fetch(apiEndpoint, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
