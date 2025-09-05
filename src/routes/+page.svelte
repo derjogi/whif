@@ -4,8 +4,10 @@
 	import IdeaCard from '$lib/components/IdeaCard.svelte';
 	import SearchBox from '$lib/components/SearchBox.svelte';
 	import EmptyDashboard from '$lib/components/EmptyDashboard.svelte';
+	import type { Idea } from '$lib/server/database/schema';
+	import type { User } from '@supabase/supabase-js';
 	
-	export let data: any;
+	export let data: {ideas: Idea[], user: User, error?: string};
 	
 	let searchQuery = '';
 	
@@ -18,7 +20,7 @@
 		goto('/create');
 	}
 	
-	$: filteredIdeas = data.ideas.filter((idea: any) => 
+	$: filteredIdeas = data.ideas.filter((idea: Idea) => 
 		idea.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
 		idea.text.toLowerCase().includes(searchQuery.toLowerCase())
 	);

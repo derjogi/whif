@@ -1,5 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { createRepositories } from '$lib/server/database/supabase';
+import type { Idea } from '$lib/server/database/schema';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	// If no user, return empty data
@@ -12,7 +13,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 
 	try {
 		const repositories = createRepositories();
-		const ideas = await repositories.ideas.getPublished();
+		const ideas: Idea[] = await repositories.ideas.getPublished();
 		
 		return {
 			ideas,

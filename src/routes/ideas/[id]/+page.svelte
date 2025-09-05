@@ -32,22 +32,16 @@
 			idea = ideaData;
 			
 			// Load categories with downstream impacts
-			const { data: categoriesData, error: categoriesError } = await supabase
+			const results = await supabase
 				.from('categories')
-				.select(`
-					*,
-					downstream_impacts(
-						*,
-						statement_metrics(*),
-						votes(vote_type)
-					)
-				`)
+				.select(`*`)
 				.eq('idea_id', ideaId)
 				.order('created_at', { ascending: false });
 
+			console.log(`Idea data: `, {"results": results, "ideaId": ideaId})
+			const { data: categoriesData, error: categoriesError } = results
 			if (categoriesError) throw categoriesError;
 			categories = categoriesData || [];
-			
 		} catch (err) {
 			console.error('Error loading idea data:', err);
 			error = 'Failed to load idea data. Please try again.';
