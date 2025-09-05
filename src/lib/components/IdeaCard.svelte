@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import type { Idea } from '$lib/server/database/schema';
 	import Icon from '@iconify/svelte';
 	
-	export let idea: any;
+	export let idea: Idea;
 	
-	function formatDate(dateString: string) {
+	function formatDate(dateString: string | Date) {
 		return new Date(dateString).toLocaleDateString('en-US', {
 			year: 'numeric',
 			month: 'short',
@@ -61,7 +62,7 @@
 		{/if}
 		
 		<div class="flex items-center justify-between text-sm text-gray-500">
-			<span>Created {formatDate(idea.created_at)}</span>
+			<span>Created {formatDate(idea.createdAt)}</span>
 			<div class="flex items-center space-x-1">
 				<Icon icon="mdi:eye" class="w-4 h-4" />
 				<span>View</span>
